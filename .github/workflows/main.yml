@@ -11,6 +11,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -46,7 +48,7 @@ jobs:
           cache-dependency-path: 'web/pnpm-lock.yaml'
 
       - name: Install C++ dependencies
-        run: pio pkg install --no-save
+        run: pio pkg install
 
       - name: Build firmware
         run: pio run --environment stable
