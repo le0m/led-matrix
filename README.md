@@ -62,7 +62,58 @@ The LED panel has 4 display modes, depending on the frame orientation:
 
 # Gallery
 
+Wiring/PIN layout
 
+<img src="https://github.com/user-attachments/assets/639bfff5-33df-4ccd-8ace-b3b7bd0f3105" alt="Wiring/PIN layout" width="800">
+
+<table>
+    <tr>
+        <td>
+            <p>Font</p>
+            <img src="https://github.com/user-attachments/assets/127f204d-a744-4bc3-8daa-86bc05b2e7ae" alt="Front" width="300">
+        </td>
+        <td>
+            <p>Back</p>
+            <img src="https://github.com/user-attachments/assets/ad2dc76f-5795-4f9d-8d62-73eaa76a2642" alt="Back" width="300">
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <p>Inside overview</p>
+            <img src="https://github.com/user-attachments/assets/89290c72-be9d-48ae-81e2-061d67721fd4" alt="Inside overview" width="300">
+        </td>
+        <td>
+            <p>GY-521 glued to the inner border of the panel frame</p>
+            <img src="https://github.com/user-attachments/assets/09560be5-7bf0-49b4-9062-4507ca82acf4" alt="GY-521 glued to the inner border of the panel frame" width="300">
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <p>ESP32 wires</p>
+            <img src="https://github.com/user-attachments/assets/b1536666-e6f3-48b7-b0cc-3fc9d728e89b" alt="ESP32 wires" width="300">
+        </td>
+        <td>
+            <p>Under the LED panel</p>
+            <img src="https://github.com/user-attachments/assets/fc978aba-f130-479f-9e3d-3d351aaf3a8e" alt="Under the LED panel" width="300">
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <p>Image rendering</p>
+            <img src="https://github.com/user-attachments/assets/308a4614-1d05-4956-9a51-0c810895d79b" alt="Image rendering" width="300">
+        </td>
+        <td>
+            <p>GIF rendering</p>
+            <img src="https://github.com/user-attachments/assets/726eb4c8-b945-4988-a89a-f609bb3e5281" alt="GIF rendering" width="300">
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <p>Rotation</p>
+            <img src="https://github.com/user-attachments/assets/76f52250-7bd9-4076-abf3-0fe4acd02f26" alt="Rotation" width="300">
+        </td>
+    </tr>
+</table>
 
 # TODOs
 
