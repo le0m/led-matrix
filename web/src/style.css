@@ -1,0 +1,53 @@
+@import 'nes.css/css/nes.min.css';
+
+@font-face {
+    font-family: "Press Start 2P";
+    src: url(/PressStart2P-Regular.ttf) format("truetype");
+}
+
+html * {
+    font-family: "Press Start 2P", system-ui;
+    font-weight: 400;
+    font-style: normal;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 5vh;
+    padding: 3vw 5vh;
+}
+
+section.nes-container.with-title > div > * {
+    margin-bottom: 1.5rem;
+}
+
+section.nes-container.with-title > div > button {
+    max-width: fit-content;
+}
+
+.logs textarea {
+    height: 200px;
+    max-height: 500px;
+    overflow: scroll;
+}
+
+.is-hidden {
+    display: none;
+}
+
+.row-field {
+    display: flex;
+    gap: 1vw;
+}
+
+canvas {
+    border: 2px solid #000;
+}
+
+/* enlarge preview with CSS, actual size remains unchanged */
+canvas#drawer-preview,
+img#gif-preview {
+    width: 256px;
+    height: 256px;
+}

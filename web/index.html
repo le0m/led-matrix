@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>LED matrix</title>
+    </head>
+    <body>
+        <div class="container">
+            <section class="nes-container with-title">
+                <h3 class="title">Image</h3>
+                <div class="image-drawer">
+                    <div class="nes-field">
+                        <div class="row-field">
+                            <label class="nes-btn">
+                                <span>Select file</span>
+                                <input id="file" type="file" accept="image/*" class="nes-input">
+                            </label>
+                            <button id="remove-file" class="nes-btn is-error is-hidden">X</button>
+                        </div>
+                    </div>
+
+                    <div class="image-drawer-preview">
+                        <p>Preview</p>
+                        <canvas id="drawer-preview" width="64" height="64"></canvas>
+                        <img id="gif-preview" class="is-hidden">
+                    </div>
+
+                    <button id="submit-file" class="nes-btn is-disabled" disabled>Upload</button>
+                    <span id="submit-file-message" class="nes-text is-hidden"></span>
+                </div>
+            </section>
+
+            <section class="nes-container with-title">
+                <h3 class="title">LED Panel</h3>
+                <div class="led-panel">
+                    <div class="nes-field">
+                        <label for="brightness">Brightness</label>
+                        <input id="brightness" type="number" step="1" min="0" max="255" class="nes-input">
+                    </div>
+
+                    <button id="submit-brightness" class="nes-btn is-disabled" disabled>Save</button>
+                    <span id="submit-brightness-message" class="nes-text is-hidden"></span>
+                </div>
+            </section>
+
+            <section class="nes-container with-title">
+                <h3 class="title">WiFi</h3>
+                <div class="wifi-settings">
+                    <div class="nes-field">
+                        <label for="ssid">SSID</label>
+                        <input id="ssid" type="text" class="nes-input">
+                    </div>
+
+                    <div class="nes-field">
+                        <label for="password">Password</label>
+                        <div class="row-field">
+                            <input id="password" type="password" class="nes-input">
+                            <button id="toggle-password" class="nes-btn">show</button>
+                        </div>
+                    </div>
+
+                    <button id="submit-wifi" class="nes-btn is-disabled" disabled>Save</button>
+                    <span id="submit-wifi-message" class="nes-text is-hidden"></span>
+                </div>
+            </section>
+
+            <section class="nes-container with-title">
+                <h3 class="title">Update</h3>
+                <div class="upload-update">
+                    <div class="nes-field">
+                        <div class="row-field">
+                            <label class="nes-btn">
+                                <span>Select file</span>
+                                <input id="update-file" type="file" accept=".bin" class="nes-input">
+                            </label>
+                            <button id="remove-update-file" class="nes-btn is-error is-hidden">X</button>
+                        </div>
+                    </div>
+
+                    <div class="nes-field">
+                        <label>Mode</label>
+                        <label>
+                            <input name="update-mode" type="radio" class="nes-radio" value="firmware" checked>
+                            <span>firmware</span>
+                        </label>
+                        <label>
+                            <input name="update-mode" type="radio" class="nes-radio" value="filesystem">
+                            <span>filesystem</span>
+                        </label>
+                    </div>
+
+                    <button id="submit-update" class="nes-btn is-disabled" disabled>Upload</button>
+                    <span id="submit-update-message" class="nes-text is-hidden"></span>
+                </div>
+            </section>
+
+            <section class="nes-container with-title">
+                <h3 class="title">Logs</h3>
+                <div class="logs">
+                    <div class="nes-field">
+                        <label for="log-level">Level</label>
+
+                        <div class="row-field">
+                            <div class="nes-select">
+                                <select id="log-level">
+                                    <option value="0">error</option>
+                                    <option value="1">warning</option>
+                                    <option value="2" selected>info</option>
+                                    <option value="3">debug</option>
+                                    <option value="4">trace</option>
+                                </select>
+                            </div>
+                            <button id="submit-log" class="nes-btn is-disabled" disabled>Save</button>
+                        </div>
+
+                        <span id="submit-log-message" class="nes-text is-error">Error saving config</span>
+                    </div>
+
+                    <div class="nes-field">
+                        <textarea id="log-messages" class="nes-textarea"></textarea>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+		<script type="module" src="/src/main.js"></script>
+    </body>
+</html>
