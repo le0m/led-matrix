@@ -1,0 +1,65 @@
+name: Main
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ v* ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          key: cache-${{ github.ref_name }}
+          path: |
+            ~/.cache/pip
+            ~/.platformio/.cache
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          cache-dependency-path: 'web/pnpm-lock.yaml'
+
+      - name: Install C++ dependencies
+        run: pio pkg install --no-save
+
+      - name: Build firmware
+        run: pio run --environment stable
+
+      - name: Build filesystem
+        run: pio run --target buildfs --environment stable
+
+      - name: Release
+        if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
+        uses: softprops/action-gh-release@v2
+        with:
+          make_latest: true
+          generate_release_notes: true
+          files: |
+            .pio/build/stable/firmware.bin
+            .pio/build/stable/littlefs.bin

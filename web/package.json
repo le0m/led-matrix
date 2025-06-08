@@ -7,6 +7,7 @@
 	"scripts": {
 		"dev": "vite",
 		"build": "vite build",
+        "release": "pnpm install --frozen-lockfile && pnpm run build",
 		"preview": "vite preview",
 		"prettier-check": "prettier --check \"./**/*.{json,css,js}\"",
 		"prettier-fix": "prettier --write \"./**/*.{json,css,js}\""
