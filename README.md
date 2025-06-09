@@ -2,15 +2,13 @@ This is a personal project to control a LED matrix from an ESP32 microcontroller
 
 # Components
 
-My LED panel is 19,2x19,2cm, so I'm using a 25x25x3cm frame with a 3D-printed passepartout.
-I've screwed 4 screws through the frame's backpanel into the LED panel's screw holes,
-with spacers to keep the panel away from the backpanel and pressed against the glass frame.
+My LED panel is 19,2x19,2cm, so I'm using a 25x25x3cm frame with a 3D-printed passepartout. I've screwed 4 screws through the frame's backpanel into the LED panel's screw holes, with spacers to keep the panel away from the backpanel and pressed against the glass frame.
 
 The gyroscope is glued inside with the chip facing upwards (on the inner border of the frame), while the esp32 and the wires are free-moving (but not too much since it's packed in there) behind the LED panel :D
 
 For powering it I'm using a random USB charger (5V 3A output): I've cut the mini-USB head and wired the esp32 board and LED panel (plus the gyroscope's ground because the esp32's were full). The panel actually uses up to 4-5A (depending on "brand", size and brightness) and the esp32 uses 0.5-1A, so I'm looking for a small power supply that can accomodate that, but it's currently working so ¯\\_(ツ)_/¯
 
-Se [gallery](#gallery) for photos.
+See [gallery](#gallery) for photos.
 
 ## Hardware
 
@@ -66,6 +64,8 @@ Wiring/PIN layout
 
 <img src="https://github.com/user-attachments/assets/639bfff5-33df-4ccd-8ace-b3b7bd0f3105" alt="Wiring/PIN layout" width="800">
 
+Some LEDs have been harmed in the development process. Our thoughts go to all the dead pixels out there~
+
 <table>
     <tr>
         <td>
@@ -119,6 +119,4 @@ Wiring/PIN layout
 
 - add FPS and other Life config
 - send current GIF
-- modeselector: prevent random wrong reads
-    notify change after 2-3 consecutive reads with the same value
-    store last 2-3 reads and return the last one only if they're the same
+- modeselector: prevent random wrong reads, use multiple reads in the span of some seconds
