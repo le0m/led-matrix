@@ -27,7 +27,8 @@ def pre_gzip_static(source, target, env):
 	print('Building JS app in "web" to "web/dist"')
 	env.Execute("pnpm -C web release")
 	print('Compressing files from "web/dist" to "data/www" directory')
-	shutil.rmtree(www_dir_path)
+	if os.path.exists(www_dir_path):
+		shutil.rmtree(www_dir_path)
 	gzip_dir_content(static_build_path, www_dir_path)
 
 env.AddPreAction('buildfs', pre_gzip_static)
