@@ -2,6 +2,7 @@ Import('env')
 
 import os
 import gzip
+import shutil
 
 def gzip_file(src_path, dst_path):
 	with open(src_path, 'rb') as src, gzip.open(dst_path, 'wb') as dst:
@@ -26,8 +27,7 @@ def pre_gzip_static(source, target, env):
 	print('Building JS app in "web" to "web/dist"')
 	env.Execute("pnpm -C web release")
 	print('Compressing files from "web/dist" to "data/www" directory')
-	if not os.path.exists(www_dir_path):
-		os.mkdir(www_dir_path)
+	shutil.rmtree(www_dir_path)
 	gzip_dir_content(static_build_path, www_dir_path)
 
 env.AddPreAction('buildfs', pre_gzip_static)
