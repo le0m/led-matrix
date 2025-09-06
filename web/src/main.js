@@ -4,7 +4,6 @@ import { config } from './config.js';
 import { firmware } from './firmware.js';
 import { websocket } from './websocket.js';
 
-
 (() => {
     const baseUrl = new URL(window.location.origin);
     image(baseUrl);

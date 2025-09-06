@@ -43,7 +43,7 @@ let offsetX, offsetY;
 let gifEncoder;
 /** @type {Uint8Array|undefined} */
 let gifData;
-let maxGifSize = 1024 * 1024; // 1 MiB, overridden if disk free size is lower
+let maxSize = 1024 * 1024; // 1 MiB, overridden if disk free size is lower
 
 /**
  * @param {File} file
@@ -72,9 +72,9 @@ const loadGif = async (file) => {
 
     gifData = finishScaledGif();
     console.log(`Rendering took ${(Date.now() - start) / 1000}s, result file is ${(gifData.byteLength / 1024)|0} KiB`);
-    if (gifData.byteLength > maxGifSize) {
-        console.error(`GIF size is ${(gifData.byteLength / 1024)|0} KiB, max size allowed is ${(maxGifSize / 1024)|0} KiB`);
-        showMessage(feedbackMessage, `Scaled down GIF exceeds maximum size of ${(maxGifSize / 1024)|0} KiB`, 'is-error');
+    if (gifData.byteLength > maxSize) {
+        console.error(`GIF size is ${(gifData.byteLength / 1024)|0} KiB, max size allowed is ${(maxSize / 1024)|0} KiB`);
+        showMessage(feedbackMessage, `Scaled down GIF exceeds maximum size of ${(maxSize / 1024)|0} KiB`, 'is-error');
 
         return;
     }
@@ -108,7 +108,7 @@ const renderFrame = (frame, first = false) => {
                 // fill with black, because LED panel is black
                 // NOTE: only the frame's area, not the whole canvas
                 context.fillRect(
-                    (previousFrameData.dims.left * ratio)+ offsetX,
+                    (previousFrameData.dims.left * ratio) + offsetX,
                     (previousFrameData.dims.top * ratio) + offsetY,
                     previousFrameData.dims.width * ratio,
                     previousFrameData.dims.height * ratio
@@ -222,8 +222,8 @@ export const image = (baseUrl) => {
         try {
             const { filesystem: { size, used } } = await res.json();
             const free = size - used;
-            if (free < maxGifSize) {
-                maxGifSize = free;
+            if (free < maxSize) {
+                maxSize = (free * 0.9)|0; // leave some space
             }
         } catch (e) {
             console.error(`Error fetching status`, e);
@@ -261,7 +261,6 @@ export const image = (baseUrl) => {
         result = null;
         canvas.classList.remove('is-hidden');
         gifPreview.classList.add('is-hidden');
-        fileRemove.classList.add('is-hidden');
         const file = e.target.files[0];
         fileLabel.innerText = file.name;
         fileRemove.classList.remove('is-hidden');
@@ -289,7 +288,9 @@ export const image = (baseUrl) => {
                     ? ((canvas.height - dstH) / 2) |0
                     : 0;
 
+                // Draw preview
                 context.drawImage(img, 0, 0, imgW, imgH, dstX, dstY, dstW, dstH);
+                // Prepare data
                 const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
                 // Remove alpha values from ImageData
                 result = new Uint8Array(canvas.width * canvas.height * 3);
@@ -302,8 +303,17 @@ export const image = (baseUrl) => {
                     result[resultIndex] = imageData.data[i];
                     resultIndex++;
                 }
+
+                if (result.byteLength > maxSize) {
+                    console.error(`Not enough space for storing image (${(result.byteLength / 1024)|0} KiB), max size allowed is ${(maxSize / 1024)|0} KiB`);
+                    showMessage(feedbackMessage, `Converted image exceeds maximum size of ${(maxSize / 1024)|0} KiB`, 'is-error');
+
+                    return;
+                }
+
+                resetMessage(feedbackMessage);
                 setDisabled(submitFile, false);
-                console.log(`Converted ${result.byteLength} bytes`, [...result].map(b => b.toString(16).padStart(2, '0')).join(', '));
+                console.log(`Image data is ${result.byteLength} bytes`/* , [...result].map(b => b.toString(16).padStart(2, '0')).join(', ') */);
             };
             img.src = file.target.result;
         };
