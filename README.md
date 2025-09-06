@@ -120,3 +120,5 @@ Some LEDs have been harmed in the development process. Our thoughts go to all th
 - add FPS and other Life config
 - send current GIF
 - modeselector: prevent random wrong reads, use multiple reads in the span of some seconds
+- a button to delete stored GIF and/or map image to free up space
+- music visualizer (needs mic)
