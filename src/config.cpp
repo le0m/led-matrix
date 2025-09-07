@@ -27,11 +27,31 @@ void Config::taskRunner(void *p) {
     }
 
     t->current.clear();
-    t->current = t->newCfg;
+    Config::merge(t->current, t->newCfg);
     t->newCfg.clear();
     t->save();
 
     vTaskDelete(NULL);
+};
+
+void Config::merge(JsonVariant dst, JsonVariantConst src) {
+    if (src.is<JsonObjectConst>()) {
+        for (JsonPairConst kvp : src.as<JsonObjectConst>()) {
+            if (dst[kvp.key()]) {
+                Config::merge(dst[kvp.key()], kvp.value());
+
+                return;
+            }
+
+            dst[kvp.key()] = kvp.value();
+        }
+
+        return;
+    }
+
+    if (!src.isNull() && strcmp(src.as<const char*>(), "") != 0) {
+        dst.set(src);
+    }
 };
 
 void Config::initServer(AsyncWebServer *server) {

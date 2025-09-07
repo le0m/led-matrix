@@ -13,6 +13,7 @@ class Config {
     private:
         JsonDocument newCfg;
         ConfigChangeHandler configChangeHandler;
+        static void merge(JsonVariant, JsonVariantConst);
         static void taskRunner(void*);
 
     public:
