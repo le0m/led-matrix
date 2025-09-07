@@ -5,13 +5,13 @@
 #include "filesystem.h"
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
+#include <AsyncJson.h>
 
 typedef std::function<void(JsonDocument cfg)> ConfigChangeHandler;
 
 class Config {
     private:
         JsonDocument newCfg;
-        char *reqBody = nullptr;
         ConfigChangeHandler configChangeHandler;
         static void taskRunner(void*);
 

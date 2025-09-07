@@ -42,30 +42,18 @@ void Config::initServer(AsyncWebServer *server) {
         response->setCode(200);
         request->send(response);
     });
-    server->on("/config", HTTP_POST,
-        [&](AsyncWebServerRequest *request) {
-            Log::instance()->info("Config JSON received\n");
-            request->send(204);
-            deserializeJson(newCfg, reqBody);
-            free(reqBody);
-            delete reqBody;
-            xTaskCreate(taskRunner, "Update config", 8192, this, 0, NULL);
-        },
-        nullptr,
-        [&](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-            // Allocate memory for whole body on first chunk
-            if (index == 0) {
-                // Cleanup if variable was already used
-                if (reqBody != nullptr) {
-                    free(reqBody);
-                    delete reqBody;
-                }
+    AsyncCallbackJsonWebHandler* handler = new AsyncCallbackJsonWebHandler("/config", [&](AsyncWebServerRequest *request, JsonVariant &json) {
+        if (request->methodToString() != "POST") {
+            request->send(405);
 
-                reqBody = (char*)malloc(total);
-            }
-
-            Log::instance()->trace("Received config JSON chunk: %d-%d (%d / %d bytes)\n", index, index + len, len, total);
-            memcpy(reqBody + index, data, len);
+            return;
         }
-    );
+
+        Log::instance()->info("Config JSON received\n");
+        request->send(204);
+        JsonObject obj = json.as<JsonObject>();
+        newCfg.set(obj);
+        xTaskCreate(taskRunner, "Update config", 8192, this, 0, NULL);
+    });
+    server->addHandler(handler);
 };
