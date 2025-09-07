@@ -40,3 +40,16 @@ export const resetMessage = (elem, hidden = true) => {
         elem.classList.add('is-hidden');
     }
 };
+
+/**
+ * Convert bytes to human-readable file sizes.
+ *
+ * @param {string|number} size Size in bytes
+ * @returns {string}
+ */
+export const humanFileSize = (size) => {
+    size = parseInt(size, 10);
+	const i = size === 0 ? 0 : Math.floor(Math.log(size) / Math.log(1024));
+
+	return `${Number((size / Math.pow(1024, i)).toFixed(2))} ${['B', 'kB', 'MB', 'GB', 'TB'][i]}`;
+};

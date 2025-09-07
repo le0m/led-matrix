@@ -51,3 +51,24 @@ img#gif-preview {
     width: 256px;
     height: 256px;
 }
+
+/* taken from NES.CSS examples */
+.message-list > .message.-left {
+  align-self: flex-start;
+}
+.message-list > .message.-right {
+  align-self: flex-end;
+}
+.message-list > .message {
+  display: flex;
+  margin-top: 2rem;
+}
+.message-list > .message.-left i {
+  margin-right: 2rem;
+}
+.message-list > .message.-right i {
+  margin-left: 2rem;
+}
+.message-list > .message i {
+  align-self: flex-end;
+}

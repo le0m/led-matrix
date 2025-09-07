@@ -3,6 +3,7 @@ import { image } from './image.js';
 import { config } from './config.js';
 import { firmware } from './firmware.js';
 import { websocket } from './websocket.js';
+import { system } from './system.js';
 
 (() => {
     const baseUrl = new URL(window.location.origin);
@@ -10,4 +11,5 @@ import { websocket } from './websocket.js';
     config(baseUrl);
     firmware(baseUrl);
     websocket(baseUrl);
+    system(baseUrl);
 })();

@@ -21,7 +21,7 @@ const logSelect = document.getElementById('log-level');
 
 export const config = (baseUrl) => {
     // Get current config
-    let url = new URL('config', baseUrl);
+    const url = new URL('config', baseUrl);
     fetch(url, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
@@ -78,7 +78,7 @@ export const config = (baseUrl) => {
             };
 
             try {
-                let url = new URL('config', baseUrl);
+                const url = new URL('config', baseUrl);
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

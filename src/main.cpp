@@ -118,10 +118,18 @@ void setup() {
         status["heap"]["size"] = ESP.getHeapSize();
         status["heap"]["free"] = ESP.getFreeHeap();
         status["heap"]["minFree"] = ESP.getMinFreeHeap();
-        status["heap"]["maxAlloc"] = ESP.getMaxAllocHeap();
-        status["flash"]["size"] = ESP.getFlashChipSize();
+        status["heap"]["maxFreeBlock"] = ESP.getMaxAllocHeap();
+        status["flash"] = ESP.getFlashChipSize();
+        status["firmware"]["size"] = ESP.getFreeSketchSpace(); // see: https://github.com/espressif/arduino-esp32/issues/3131
+        status["firmware"]["used"] = ESP.getSketchSize();
+        status["firmware"]["version"] = VERSION; // defined at build time, see pre_version.py
         status["filesystem"]["size"] = LittleFS.totalBytes();
         status["filesystem"]["used"] = LittleFS.usedBytes();
+        status["chip"]["model"] = ESP.getChipModel();
+        status["chip"]["revision"] = ESP.getChipRevision();
+        status["chip"]["cores"] = ESP.getChipCores();
+        status["chip"]["clock"] = ESP.getCpuFreqMHz();
+        status["sdk"] = ESP.getSdkVersion();
         AsyncResponseStream *response = request->beginResponseStream("application/json");
         serializeJson(status, *response);
         response->setCode(200);

@@ -95,7 +95,7 @@
             </section>
 
             <section class="nes-container with-title">
-                <h3 class="title">Logs</h3>
+                <h3 class="title">Debug</h3>
                 <div class="logs">
                     <div class="nes-field">
                         <label for="log-level">Level</label>
@@ -119,6 +119,47 @@
                     <div class="nes-field">
                         <textarea id="log-messages" class="nes-textarea"></textarea>
                     </div>
+                </div>
+
+                <div class="resources">
+                    <div class="nes-field">
+                        <label>
+                            Heap <span id="heap-info"></span>
+                            <progress id="heap-perc" class="nes-progress is-pattern" max="100"></progress>
+                        </label>
+                    </div>
+
+                    <div class="nes-field">
+                        <label>
+                            Filesystem <span id="fs-info"></span>
+                            <progress id="fs-perc" class="nes-progress is-pattern" max="100"></progress>
+                        </label>
+                    </div>
+
+                    <div class="nes-field">
+                        <label>
+                            Firmware <span id="fw-info"></span>
+                            <progress id="firmware-perc" class="nes-progress is-pattern" max="100"></progress>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="system">
+                    <section class="message-list">
+                        <section class="message -left">
+                            <i class="nes-bcrikko"></i>
+                            <div class="nes-balloon from-left">
+                                <p id="hardware-message"></p>
+                            </div>
+                        </section>
+
+                        <section class="message -right">
+                            <div class="nes-balloon from-right">
+                                <p id="software-message"></p>
+                            </div>
+                            <i class="nes-bcrikko"></i>
+                        </section>
+                    </section>
                 </div>
             </section>
         </div>

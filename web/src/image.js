@@ -1,4 +1,4 @@
-import { resetMessage, setDisabled, showMessage } from './utils.js';
+import { humanFileSize, resetMessage, setDisabled, showMessage } from './utils.js';
 import { parseGIF, decompressFrames } from 'gifuct-js';
 import { quantize, applyPalette, prequantize, GIFEncoder, nearestColorIndexWithDistance } from 'gifenc';
 
@@ -71,10 +71,10 @@ const loadGif = async (file) => {
     }
 
     gifData = finishScaledGif();
-    console.log(`Rendering took ${(Date.now() - start) / 1000}s, result file is ${(gifData.byteLength / 1024)|0} KiB`);
+    console.log(`Rendering took ${(Date.now() - start) / 1000}s, result file is ${humanFileSize(gifData.byteLength)}`);
     if (gifData.byteLength > maxSize) {
-        console.error(`GIF size is ${(gifData.byteLength / 1024)|0} KiB, max size allowed is ${(maxSize / 1024)|0} KiB`);
-        showMessage(feedbackMessage, `Scaled down GIF exceeds maximum size of ${(maxSize / 1024)|0} KiB`, 'is-error');
+        console.error(`GIF size is ${(gifData.byteLength / 1024)|0} KiB, max size allowed is ${humanFileSize(maxSize)}`);
+        showMessage(feedbackMessage, `Scaled down GIF exceeds maximum size of ${humanFileSize(maxSize)}`, 'is-error');
 
         return;
     }
@@ -305,8 +305,8 @@ export const image = (baseUrl) => {
                 }
 
                 if (result.byteLength > maxSize) {
-                    console.error(`Not enough space for storing image (${(result.byteLength / 1024)|0} KiB), max size allowed is ${(maxSize / 1024)|0} KiB`);
-                    showMessage(feedbackMessage, `Converted image exceeds maximum size of ${(maxSize / 1024)|0} KiB`, 'is-error');
+                    console.error(`Not enough space for storing image (${humanFileSize(result.byteLength)}), max size allowed is ${humanFileSize(maxSize)}`);
+                    showMessage(feedbackMessage, `Converted image exceeds maximum size of ${humanFileSize(maxSize)}`, 'is-error');
 
                     return;
                 }
