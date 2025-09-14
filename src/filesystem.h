@@ -7,6 +7,7 @@
 #include <ArduinoJson.h>
 
 #define MAX_GIF_SIZE 1048576 // 1 MiB
+#define MAX_IMAGE_SIZE 1048576 // 1 MiB
 
 bool pathExists(const char*);
 bool writeBytes(const char*, uint8_t*, size_t);

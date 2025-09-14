@@ -28,6 +28,7 @@ void GIF::close() {
     }
 
     playing = false;
+    delay(50); // wait for possible renderFrame() execution to finish
     gif.close();
     frameDelay = 0;
     lastGifFrameRender = 0;
@@ -45,7 +46,7 @@ void GIF::renderFrame(MatrixPanel_I2S_DMA  *display) {
             break;
 
         case -1:
-            Log::instance()->error("Error decoding GIF frame\n");
+            Log::instance()->error("Error decoding GIF frame: %d\n", gif.getLastError());
             break;
     }
 };
@@ -91,12 +92,9 @@ int32_t GIF::readFile(GIFFILE *pFile, uint8_t *pBuf, int32_t iLen) {
 };
 
 int32_t GIF::seekFile(GIFFILE *pFile, int32_t iPosition) {
-    int i = micros();
     File *f = static_cast<File *>(pFile->fHandle);
     f->seek(iPosition);
     pFile->iPos = (int32_t)f->position();
-    i = micros() - i;
-    //  Log::instance()->trace("Seek time = %d us\n", i);
 
     return pFile->iPos;
 };

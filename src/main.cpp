@@ -20,7 +20,7 @@ OTA ota(1000);
 draw_mode drawMode = DRAW_MODE_NONE;
 WiFiController wifi;
 Life life(WIDTH, HEIGHT);
-Image image(WIDTH, HEIGHT);
+Media media(WIDTH, HEIGHT);
 QRCode qr(WIDTH, HEIGHT);
 AsyncWebServer server(80);
 ModeSelector selector;
@@ -58,7 +58,7 @@ void updateConfig(JsonDocument newConfig) {
     }
     if (newConfig["log"]["level"].as<uint8_t>() != conf.current["log"]["level"].as<uint8_t>()) {
         Log::instance()->setLevel(newConfig["log"]["level"].as<log_level>());
-        Log::instance()->info("Log level changed: %s\n", Log::instance()->stringLevel());
+        Log::instance()->info("Log level changed: %s\n", Log::instance()->stringLevel().c_str());
     }
 };
 
@@ -103,8 +103,8 @@ void setup() {
     ota.initServer(&server);
 
     // Initialize modules
-    image.initServer(&server);
-    image.loadMedia();
+    media.initServer(&server);
+    media.loadMedia();
     life.setFPS(FPS);
     conf.initServer(&server);
 
@@ -155,7 +155,7 @@ void loop() {
             break;
 
         case DRAW_MODE_IMAGE:
-            image.render(display);
+            media.render(display);
             break;
 
         case DRAW_MODE_QR:

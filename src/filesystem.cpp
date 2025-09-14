@@ -42,7 +42,6 @@ bool readBytes(const char *path, uint8_t *buf, size_t size) {
         return false;
     }
 
-
     File file = LittleFS.open(path);
     if (!file) {
         Log::instance()->error("Error opening file: %s\n", path);
