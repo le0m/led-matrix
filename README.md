@@ -118,7 +118,10 @@ Some LEDs have been harmed in the development process. Our thoughts go to all th
 # TODOs
 
 - add FPS and other Life config
-- send current GIF
 - modeselector: prevent random wrong reads, use multiple reads in the span of some seconds
-- a button to delete stored GIF and/or map image to free up space
 - music visualizer (needs mic)
+- setting for map remote API pull time (15m, 30m, 1h)
+- support PNG
+- consolidate requests from web UI
+- implement map zoom (need scaling on esp32)
+- implement other position centering methods (center on point, use a margin to move the view before the position reaches the panel border, ...)

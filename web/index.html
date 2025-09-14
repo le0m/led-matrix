@@ -26,7 +26,145 @@
                     </div>
 
                     <button id="submit-file" class="nes-btn is-disabled" disabled>Upload</button>
+                    <button id="delete-media" class="nes-btn is-error">Delete media</button>
                     <span id="submit-file-message" class="nes-text is-hidden"></span>
+                    <dialog id="delete-media-confirm" class="nes-dialog">
+                        <form method="dialog">
+                            <p class="title">Confirm</p>
+                            <p>Delete image/GIF stored on panel?</p>
+                            <menu class="dialog-menu">
+                                <button class="nes-btn" value="0">Cancel</button>
+                                <button class="nes-btn is-primary" value="1">Confirm</button>
+                            </menu>
+                        </form>
+                    </dialog>
+
+                </div>
+            </section>
+
+            <section class="nes-container with-title">
+                <h3 class="title">Map</h3>
+                <div class="map">
+                    <p class="nes-text is-warning">Currently supports only equirectangular world maps</p>
+
+                    <div class="nes-field">
+                        <div class="row-field">
+                            <label class="nes-btn">
+                                <span>Select file</span>
+                                <input id="map-file" type="file" accept="image/jpeg" class="nes-input">
+                            </label>
+                            <button id="remove-map-file" class="nes-btn is-error is-hidden">X</button>
+                        </div>
+                    </div>
+
+                    <div class="nes-field">
+                        <label>
+                            <input id="show-grid" type="checkbox" class="nes-checkbox" />
+                            <span>Show grid</span>
+                        </label>
+                    </div>
+
+                    <div class="map-preview">
+                        <p>Map preview</p>
+                        <canvas id="map-preview" width="600" height="400"></canvas>
+                    </div>
+
+                    <div class="map-panel">
+                        <p>Panel preview</p>
+                        <canvas id="panel-preview" width="64" height="64"></canvas>
+                    </div>
+
+                    <div class="nes-field">
+                        <div class="row-field">
+                            <label>
+                                Zoom
+                                <div class="nes-select">
+                                    <select id="map-zoom" class="is-disabled" disabled>
+                                        <option value="1" selected>1x</option>
+                                        <option value="2">2x</option>
+                                        <option value="4">4x</option>
+                                        <option value="8">8x</option>
+                                    </select>
+                                </div>
+                            </label>
+                            <label>
+                                Point size
+                                <input id="location-size" type="number" class="nes-input">
+                            </label>
+                            <label>
+                                Location color
+                                <input id="location-color" type="color" class="nes-input">
+                            </label>
+                            <label>
+                                Route color
+                                <input id="location-route-color" type="color" class="nes-input">
+                            </label>
+                        </div>
+                    </div>
+
+                    <section class="nes-container with-title">
+                        <h4 class="title">Static location</h4>
+                        <div class="nes-field">
+                            <div class="row-field">
+                                <label>
+                                    Latitude
+                                    <input id="location-latitude" type="text" class="nes-input">
+                                </label>
+                                <label>
+                                    Longitude
+                                    <input id="location-longitude" type="text" class="nes-input">
+                                </label>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="nes-container with-title">
+                        <h4 class="title">Remote API</h4>
+                        <p><span class="nes-text is-error">ADVANCED:</span> Periodically call a remote API to get position.</p>
+                        <p>If all required fields are set, this has precedence over static location.</p>
+                        <p>URL and method are required.</p>
+                        <p>Regex is required, uses the <a href="https://en.cppreference.com/w/cpp/regex/ecmascript.html">Modified ECMAScript grammar</a>.</p>
+                        <p>Body is optional, must be a query string if the request is GET or stringified JSON if POST.</p>
+                        <p>Headers are optional, must be a stringified JSON.</p>
+                        <div class="nes-field">
+                            <div class="row-field">
+                                <label>
+                                    URL
+                                    <input id="location-url" type="text" class="nes-input">
+                                </label>
+                                <label>
+                                    Method
+                                    <div class="nes-select">
+                                        <select id="location-method" required>
+                                            <option value="GET" selected>GET</option>
+                                            <option value="POST">POST</option>
+                                        </select>
+                                    </div>
+                                </label>
+                                <label>
+                                    Regex
+                                    <input id="location-regex" type="text" class="nes-input">
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="nes-field">
+                            <label>
+                                Body
+                                <input id="location-body" type="text" class="nes-input">
+                            </label>
+                            <label>
+                                Headers
+                                <input id="location-headers" type="text" class="nes-input">
+                            </label>
+                        </div>
+
+                        <button id="location-test" class="nes-btn">Test</button>
+                        <span id="location-test-message" class="nes-text is-hidden"></span>
+                    </section>
+
+                    <button id="submit-map-file" class="nes-btn is-disabled" disabled>Upload and save</button>
+                    <span id="submit-map-file-message" class="nes-text is-hidden"></span>
                 </div>
             </section>
 
@@ -123,24 +261,23 @@
 
                 <div class="resources">
                     <div class="nes-field">
-                        <label>
-                            Heap <span id="heap-info"></span>
-                            <progress id="heap-perc" class="nes-progress is-pattern" max="100"></progress>
-                        </label>
-                    </div>
+                        <div class="row-field">
+                            <label>
+                                Heap <span id="heap-info"></span>
+                                <progress id="heap-perc" class="nes-progress is-pattern" max="100"></progress>
+                            </label>
+                            <label>
+                                Filesystem <span id="fs-info"></span>
+                                <progress id="fs-perc" class="nes-progress is-pattern" max="100"></progress>
+                            </label>
+                            <label>
+                                Firmware <span id="fw-info"></span>
+                                <progress id="firmware-perc" class="nes-progress is-pattern" max="100"></progress>
+                            </label>
 
-                    <div class="nes-field">
-                        <label>
-                            Filesystem <span id="fs-info"></span>
-                            <progress id="fs-perc" class="nes-progress is-pattern" max="100"></progress>
-                        </label>
-                    </div>
+                        </div>
 
-                    <div class="nes-field">
-                        <label>
-                            Firmware <span id="fw-info"></span>
-                            <progress id="firmware-perc" class="nes-progress is-pattern" max="100"></progress>
-                        </label>
+                        <button id="refresh-resources" class="nes-btn">Refresh</button>
                     </div>
                 </div>
 

@@ -1,4 +1,4 @@
-import { humanFileSize } from "./utils";
+import { handleFetch, humanFileSize } from "./utils";
 
 /**
  * @typedef SystemStatus
@@ -10,7 +10,6 @@ import { humanFileSize } from "./utils";
  * @property {string} sdk
  */
 
-let pullTimer = undefined;
 const hwMsg = document.getElementById('hardware-message');
 const swMsg = document.getElementById('software-message');
 const heap = document.getElementById('heap-perc');
@@ -19,22 +18,7 @@ const fw = document.getElementById('firmware-perc');
 const heapInfo = document.getElementById('heap-info');
 const fsInfo = document.getElementById('fs-info');
 const fwInfo = document.getElementById('fw-info');
-
-/**
- * Get current status.
- *
- * @param {string} baseUrl API URL
- * @returns {Promise<SystemStatus>}
- */
-const getStatus = async (baseUrl) => {
-    const url = new URL('status', baseUrl);
-    const res = await fetch(url)
-    if (!res.ok || res.status != 200) {
-        throw new Error(`Error getting current status, status code ${res.status}: ${await res.text()}`);
-    }
-
-    return await res.json();
-};
+const refreshButton = document.getElementById('refresh-resources');
 
 const setProgress = (elem, progress) => {
     elem.value = progress;
@@ -48,8 +32,14 @@ const setProgress = (elem, progress) => {
     }
 };
 
-const loop = async (baseUrl) => {
-    const status = await getStatus(baseUrl);
+const updateStatus = async (baseUrl) => {
+    const res = await handleFetch(new URL('status', baseUrl));
+    if (!res) {
+        return;
+    }
+
+    /** @type {SystemStatus} */
+    const status = await res.json();
 
     // Update hardware/software info
     hwMsg.innerText = `Running on a ${status.chip.model} (rev. ${status.chip.revision}) with ${status.chip.cores} CPU clocking at ${status.chip.clock} MHz`;
@@ -67,5 +57,8 @@ const loop = async (baseUrl) => {
     fwInfo.innerText = `(${humanFileSize(status.firmware.used)} / ${humanFileSize(status.firmware.size)})`;
 };
 
-export const system = (baseUrl) =>
-    loop(baseUrl).then(() => pullTimer = setTimeout(() => loop(baseUrl), 60_000));
+export const system = (baseUrl) => {
+    updateStatus(baseUrl);
+
+    refreshButton.addEventListener('click', () => updateStatus(baseUrl));
+};

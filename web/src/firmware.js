@@ -1,4 +1,4 @@
-import { resetMessage, setDisabled, showMessage } from './utils.js';
+import { resetMessage, setDisabled, showMessage, handleFetch } from './utils.js';
 
 const submitUpdate = document.getElementById('submit-update');
 setDisabled(submitUpdate, true);
@@ -66,29 +66,19 @@ export const firmware = (baseUrl) => {
             return;
         }
 
-        let url = new URL('ota', baseUrl);
+        const url = new URL('ota', baseUrl);
         url.searchParams.set('mode', mode);
         url.searchParams.set('size', file.size);
-        try {
-            let response = await fetch(url);
-            if (!response.ok || response.status >= 300) {
-                throw new Error(`error initializing update: ${await response.text()}`);
-            }
-
-            url = new URL('ota', baseUrl);
-            response = await fetch(url, {
-                method: 'POST',
-                body: file,
-            });
-            if (!response.ok || response.status >= 300) {
-                throw new Error(`'error uploading file: ${await response.text()}'`);
-            }
-
+        if (
+            await handleFetch(url)
+            && await handleFetch(new URL('ota', baseUrl), { method: 'POST', body: file })
+        ) {
             showMessage(feedbackMessage, 'Update applyed, rebooting', 'is-success');
-        } catch (e) {
-            console.error('Error applying the update:', e);
-            setDisabled(submitUpdate, false);
-            showMessage(feedbackMessage, 'Error applying update', 'is-error');
+
+            return;
         }
+
+        setDisabled(submitUpdate, false);
+        showMessage(feedbackMessage, 'Error applying update', 'is-error');
     });
 };

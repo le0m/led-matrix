@@ -52,6 +52,10 @@ img#gif-preview {
     height: 256px;
 }
 
+canvas#map-preview {
+    max-width: 80vw;
+}
+
 /* taken from NES.CSS examples */
 .message-list > .message.-left {
   align-self: flex-start;

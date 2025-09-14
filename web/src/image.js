@@ -1,6 +1,6 @@
-import { humanFileSize, resetMessage, setDisabled, showMessage } from './utils.js';
+import { humanFileSize, resetMessage, setDisabled, showMessage, handleFetch, readImage, canvas2jpeg } from './utils.js';
 import { parseGIF, decompressFrames } from 'gifuct-js';
-import { quantize, applyPalette, prequantize, GIFEncoder, nearestColorIndexWithDistance } from 'gifenc';
+import { quantize, applyPalette, GIFEncoder } from 'gifenc';
 
 /**
  * Original code taken from https://github.com/javl/image2cpp
@@ -10,6 +10,8 @@ const submitFile = document.getElementById('submit-file');
 setDisabled(submitFile, true);
 const feedbackMessage = document.getElementById('submit-file-message');
 resetMessage(feedbackMessage);
+const deleteMedia = document.getElementById('delete-media');
+const deleteMediaConfirm = document.getElementById('delete-media-confirm');
 const fileInput = document.getElementById('file');
 fileInput.value = null;
 const fileLabel = fileInput.parentElement.querySelector('span');
@@ -25,8 +27,6 @@ canvas.height = 64;
 /** @type {CanvasRenderingContext2D} */
 const context = canvas.getContext('2d');
 context.fillStyle = '#000000ff';
-/** @type {Uint8Array|null} */
-let result = null;
 
 // GIF stuff
 const tmpCanvas = new OffscreenCanvas(canvas.width, canvas.height);
@@ -43,7 +43,41 @@ let offsetX, offsetY;
 let gifEncoder;
 /** @type {Uint8Array|undefined} */
 let gifData;
+/** @type {Uint8Array|undefined} */
+let imageData;
 let maxSize = 1024 * 1024; // 1 MiB, overridden if disk free size is lower
+
+/**
+ * @param {File} file
+ */
+const loadImage = async (file) => {
+    const img = await readImage(file);
+    // Center and scale image to canvas size keeping ratio
+    const imgW = img.width;
+    const imgH = img.height;
+    const ratio = Math.min(canvas.width / imgW, canvas.height / imgH);
+    const dstW = (imgW * ratio) |0;
+    const dstH = (imgH * ratio) |0;
+    const dstX = dstW < canvas.width
+        ?  ((canvas.width - dstW) / 2) |0
+        : 0
+    const dstY = dstH < canvas.height
+        ? ((canvas.height - dstH) / 2) |0
+        : 0;
+
+    // Draw preview
+    context.drawImage(img, 0, 0, imgW, imgH, dstX, dstY, dstW, dstH);
+    imageData = await canvas2jpeg(canvas).then((blob) => blob.bytes());
+    if (imageData.byteLength > maxSize) {
+        console.error(`Not enough space for storing image (${humanFileSize(imageData.byteLength)}), max size allowed is ${humanFileSize(maxSize)}`);
+        showMessage(feedbackMessage, `Resized image exceeds maximum size of ${humanFileSize(maxSize)}`, 'is-error');
+
+        return;
+    }
+
+    setDisabled(submitFile, false);
+    console.log(`Image is ${humanFileSize(imageData.byteLength)}`);
+};
 
 /**
  * @param {File} file
@@ -64,7 +98,7 @@ const loadGif = async (file) => {
         ? ((canvas.height - scaledGifH) / 2)
         : 0;
     gifEncoder = new GIFEncoder({ auto: true });
-    console.log(`Rendering GIF: ${frames.length} frames, ${(frames.reduce((tot, frm) => tot + frm.delay, 0) / 1000).toPrecision(2)}s, ${(file.size / 1024)|0} KiB`);
+    console.log(`Rendering GIF: ${frames.length} frames, ${(frames.reduce((tot, frm) => tot + frm.delay, 0) / 1000).toPrecision(2)}s, ${humanFileSize(file.size)}`);
     for (let i = 0; i < frames.length; i++) {
         const frameData = renderFrame(frames[i], i === 0);
         encodeFrame(frameData, frames[i].delay);
@@ -73,7 +107,7 @@ const loadGif = async (file) => {
     gifData = finishScaledGif();
     console.log(`Rendering took ${(Date.now() - start) / 1000}s, result file is ${humanFileSize(gifData.byteLength)}`);
     if (gifData.byteLength > maxSize) {
-        console.error(`GIF size is ${(gifData.byteLength / 1024)|0} KiB, max size allowed is ${humanFileSize(maxSize)}`);
+        console.error(`GIF size is ${humanFileSize(gifData.byteLength)}, max size allowed is ${humanFileSize(maxSize)}`);
         showMessage(feedbackMessage, `Scaled down GIF exceeds maximum size of ${humanFileSize(maxSize)}`, 'is-error');
 
         return;
@@ -185,48 +219,35 @@ export const image = (baseUrl) => {
     context.fillRect(0, 0, canvas.width, canvas.height);
 
     // Get current image
-    let url = new URL('drawer', baseUrl);
-    fetch(url).then(async (res) => {
-        if (!res.ok) {
-            console.error(`Error receiving current image, status code ${res.status}: ${await res.text()}`);
-
+    handleFetch(new URL('drawer', baseUrl)).then(async (resp) => {
+        if (!resp) {
+            return;
+        }
+        if (resp.status === 204) {
+            // no media stored
             return;
         }
 
-        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-        const data = await res.bytes();
-        let readIndex = 0;
-        // Add alpha values for ImageData
-        for (let i = 0; i < imageData.data.length; i++) {
-            if ((i + 1) % 4 === 0) {
-                imageData.data[i] = 255
-                continue;
-            }
-
-            imageData.data[i] = data[readIndex];
-            readIndex++;
+        const contentType = resp.headers.get('Content-Type');
+        if (contentType === 'image/jpeg') {
+            await loadImage(await resp.blob());
+        } else if (contentType === 'image/gif') {
+            await loadGif(await resp.blob());
+        } else {
+            console.error(`Unhandled content type for current image: ${contentType}`);
         }
-
-        context.putImageData(imageData, 0, 0);
     });
 
     // Get current free disk
-    url = new URL('status', baseUrl);
-    fetch(url).then(async (res) => {
-        if (!res.ok || res.status != 200) {
-            console.error(`Error getting current status, status code ${res.status}: ${await res.text()}`);
-
+    handleFetch(new URL('status', baseUrl)).then(async (resp) => {
+        if (!resp) {
             return;
         }
 
-        try {
-            const { filesystem: { size, used } } = await res.json();
-            const free = size - used;
-            if (free < maxSize) {
-                maxSize = (free * 0.9)|0; // leave some space
-            }
-        } catch (e) {
-            console.error(`Error fetching status`, e);
+        const { filesystem: { size, used } } = await resp.json();
+        const free = size - used;
+        if (free < maxSize) {
+            maxSize = (free * 0.9)|0; // leave some space
         }
     });
 
@@ -235,8 +256,8 @@ export const image = (baseUrl) => {
         fileInput.value = null;
         fileLabel.innerText = initialFileLabelText;
         fileRemove.classList.add('is-hidden');
-        result = null;
         resetGif();
+        imageData = undefined;
         // Fill canvas with black, because the LED panel is black
         context.fillRect(0, 0, canvas.width, canvas.height);
         setDisabled(submitFile, true);
@@ -246,19 +267,25 @@ export const image = (baseUrl) => {
     });
 
     // File selected
-    fileInput.addEventListener('change', (e) => {
+    fileInput.addEventListener('change', async (e) => {
+        setDisabled(submitFile, true);
         if (e.target.files.length === 0) {
             fileLabel.innerText = initialFileLabelText;
+
+            return;
+        }
+        if (!['image/jpeg', 'image/gif'].includes(e.target.files[0].type)) {
+            console.error(`Selected media is not JPEG or GIF: ${e.target.files[0].type}`);
+            showMessage(feedbackMessage, 'Only JPEG and GIF files are currently supported', 'is-error');
 
             return;
         }
 
         // Fill canvas with black, because the LED panel is black
         context.fillRect(0, 0, canvas.width, canvas.height);
-        setDisabled(submitFile, true);
         resetMessage(feedbackMessage);
         resetGif();
-        result = null;
+        imageData = undefined;
         canvas.classList.remove('is-hidden');
         gifPreview.classList.add('is-hidden');
         const file = e.target.files[0];
@@ -270,92 +297,61 @@ export const image = (baseUrl) => {
             return;
         }
 
-        // Convert image to array of 8bit values
-        const reader = new FileReader();
-        reader.onload = (file) => {
-            const img = new Image();
-            img.onload = () => {
-                // Center and scale image to canvas size keeping ratio
-                const imgW = img.width;
-                const imgH = img.height;
-                const ratio = Math.min(canvas.width / imgW, canvas.height / imgH);
-                const dstW = (imgW * ratio) |0;
-                const dstH = (imgH * ratio) |0;
-                const dstX = dstW < canvas.width
-                    ?  ((canvas.width - dstW) / 2) |0
-                    : 0
-                const dstY = dstH < canvas.height
-                    ? ((canvas.height - dstH) / 2) |0
-                    : 0;
-
-                // Draw preview
-                context.drawImage(img, 0, 0, imgW, imgH, dstX, dstY, dstW, dstH);
-                // Prepare data
-                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                // Remove alpha values from ImageData
-                result = new Uint8Array(canvas.width * canvas.height * 3);
-                let resultIndex = 0;
-                for (let i = 0; i < imageData.data.length; i++) {
-                    if ((i + 1) % 4 === 0) {
-                        continue;
-                    }
-
-                    result[resultIndex] = imageData.data[i];
-                    resultIndex++;
-                }
-
-                if (result.byteLength > maxSize) {
-                    console.error(`Not enough space for storing image (${humanFileSize(result.byteLength)}), max size allowed is ${humanFileSize(maxSize)}`);
-                    showMessage(feedbackMessage, `Converted image exceeds maximum size of ${humanFileSize(maxSize)}`, 'is-error');
-
-                    return;
-                }
-
-                resetMessage(feedbackMessage);
-                setDisabled(submitFile, false);
-                console.log(`Image data is ${result.byteLength} bytes`/* , [...result].map(b => b.toString(16).padStart(2, '0')).join(', ') */);
-            };
-            img.src = file.target.result;
-        };
-        reader.readAsDataURL(file);
+        loadImage(file);
     });
 
     // Send file bytes to server
     submitFile.addEventListener('click', async () => {
         setDisabled(submitFile, true);
         showMessage(feedbackMessage, 'Uploading...', 'is-primary');
-        try {
-            let url = new URL('drawer', baseUrl);
-            let data, contentType, length;
-            if (result) {
-                console.log('uploading image');
-                data = result;
-                contentType = 'application/octet-stream';
-                length = result.byteLength;
-            } else if (gifData) {
-                console.log('uploading GIF');
-                data = gifData;
-                contentType = 'image/gif';
-                length = gifData.byteLength;
-            } else {
-                console.error('Neither image or gif selected');
+        let data, contentType;
+        if (imageData) {
+            data = imageData;
+            contentType = 'image/jpeg';
+        } else if (gifData) {
+            data = gifData;
+            contentType = 'image/gif';
+        } else {
+            console.error('Neither image or gif selected');
 
-                return;
-            }
+            return;
+        }
 
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': contentType, 'Content-Length': length },
-                body: data,
-            });
-            if (!response.ok || response.status != 204) {
-                throw new Error(`status code ${response.status}: ${await response.text()}`);
-            }
-
+        const res = await handleFetch(new URL('drawer', baseUrl), {
+            method: 'POST',
+            headers: { 'Content-Type': contentType, 'Content-Length': data.byteLength },
+            body: data,
+        });
+        if (res) {
             showMessage(feedbackMessage, 'File uploaded', 'is-success');
-        } catch (e) {
-            console.error('Error uploading file:', e);
-            showMessage(feedbackMessage, 'Error uploading file', 'is-error');
+
+            return;
+        }
+
+        showMessage(feedbackMessage, 'Error uploading file', 'is-error');
+        setDisabled(submitFile, false);
+    });
+
+    // Delete image/gif
+    deleteMedia.addEventListener('click', () => deleteMediaConfirm.showModal());
+    deleteMediaConfirm.addEventListener('close', async () => {
+        const confirmed = parseInt(deleteMediaConfirm.returnValue, 10);
+        if (!confirmed) {
+            return;
+        }
+
+        setDisabled(deleteMedia, true);
+        showMessage(feedbackMessage, 'Deleting media...', 'is-primary');
+        const res = await handleFetch(new URL('drawer', baseUrl), { method: 'DELETE' });
+        setDisabled(deleteMedia, false);
+        if (!res) {
+            showMessage(feedbackMessage, 'Error deleting media', 'is-error');
+
+            return;
+        }
+
+        showMessage(feedbackMessage, 'Media deleted', 'is-success');
+        if (imageData?.byteLength || gifData?.byteLength) {
             setDisabled(submitFile, false);
         }
     });

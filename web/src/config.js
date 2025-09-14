@@ -1,4 +1,4 @@
-import { resetMessage, setDisabled, showMessage } from './utils.js';
+import { resetMessage, setDisabled, showMessage, handleFetch } from './utils.js';
 
 let hidePwd = true;
 const submitWifi = document.getElementById('submit-wifi');
@@ -21,19 +21,15 @@ const logSelect = document.getElementById('log-level');
 
 export const config = (baseUrl) => {
     // Get current config
-    const url = new URL('config', baseUrl);
-    fetch(url, {
+    handleFetch(new URL('config', baseUrl), {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
-    }).then(async (res) => {
-        const data = await res.text();
-        if (!res.ok || res.status != 200) {
-            console.error(`Error receiving configuration, status code ${res.status}: ${data}`);
-
+    }).then(async (resp) => {
+        if (!resp) {
             return;
         }
 
-        const json = JSON.parse(data);
+        const json = await resp.json();
         ssidInput.value = json?.wifi?.ssid;
         pwdInput.value = json?.wifi?.password;
         brightnessInput.value = json?.panel?.brightness || 127;
@@ -64,36 +60,30 @@ export const config = (baseUrl) => {
         submitElem.addEventListener('click', async () => {
             setDisabled(submitElem, true);
             showMessage(feedbackElem, 'Saving...', 'is-primary');
-            const config = {
-                wifi: {
-                    ssid: ssidInput.value,
-                    password: pwdInput.value,
-                },
-                panel: {
-                    brightness: Math.min(255, Math.max(0, brightnessInput.value)),
-                },
-                log: {
-                    level: parseInt(logSelect.value, 10)
-                }
-            };
-
-            try {
-                const url = new URL('config', baseUrl);
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(config),
-                });
-                if (!response.ok || response.status != 204) {
-                    throw new Error(`status code ${response.status}: ${await response.text()}`);
-                }
-
+            const res = await handleFetch(new URL('config', baseUrl), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    wifi: {
+                        ssid: ssidInput.value,
+                        password: pwdInput.value,
+                    },
+                    panel: {
+                        brightness: Math.min(255, Math.max(0, brightnessInput.value)),
+                    },
+                    log: {
+                        level: parseInt(logSelect.value, 10)
+                    }
+                }),
+            });
+            if (res) {
                 showMessage(feedbackElem, 'Configuration saved', 'is-success');
-            } catch (e) {
-                console.error('Error sending configuration:', e);
-                showMessage(feedbackElem, 'Error saving configuration', 'is-error');
-                setDisabled(submitElem, false);
+
+                return;
             }
+
+            showMessage(feedbackElem, 'Error saving configuration', 'is-error');
+            setDisabled(submitElem, false);
         });
     };
     handleSubmit(submitWifi, feedbackWifiMessage);

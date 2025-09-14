@@ -1,3 +1,9 @@
+/**
+ * Disable or enable an input.
+ *
+ * @param {HTMLInputElement} elem Element
+ * @param {boolean} disabled Whether to disable or enable
+ */
 export const setDisabled = (elem, disabled = false) => {
     elem.disabled = disabled;
     if (disabled) {
@@ -53,3 +59,65 @@ export const humanFileSize = (size) => {
 
 	return `${Number((size / Math.pow(1024, i)).toFixed(2))} ${['B', 'kB', 'MB', 'GB', 'TB'][i]}`;
 };
+
+/**
+ * Wait some time.
+ *
+ * @param {number} ms Milliseconds
+ * @returns {Promise<void>}
+ */
+export const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+
+/**
+ * Wrapper for fetch() that handles errors by logging and returning undefined.
+ *
+ * @param {URL} url
+ * @param {RequestInit} options
+ * @returns {Promise<Response|undefined>}
+ */
+export const handleFetch = async (url, options = {}) => {
+    try {
+        const resp = await fetch(url, options);
+        if (!resp.ok) {
+            throw new Error(`Status code ${resp.status}`, { cause: { response: resp } });
+        }
+
+        return resp;
+    } catch (e) {
+        console.error(`Error fetching ${url.toString()}: ${e.message}`, e);
+
+        return undefined;
+    }
+};
+
+/**
+ * Read a blob into an Image.
+ *
+ * @param {Blob} data
+ * @returns {Promise<HTMLImageElement>}
+ */
+export const readImage = (data) => new Promise((res, rej) => {
+    const objUrl = window.URL.createObjectURL(data);
+    const img = new Image();
+    img.onerror = (e) => rej(e);
+    img.onload = () => res(img);
+    img.src = objUrl;
+});
+
+/**
+ * Convert the canvas to a JPEG image.
+ *
+ * @param {HTMLCanvasElement} canvas
+ * @returns {Promise<Blob>}
+ */
+export const canvas2jpeg = (canvas) => new Promise((res, rej) =>
+    canvas.toBlob((blob) => {
+        if (!blob) {
+            rej('Error generating scaled image');
+
+            return;
+        }
+
+        res(blob);
+    }, 'image/jpeg')
+);
