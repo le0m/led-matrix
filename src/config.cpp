@@ -22,35 +22,33 @@ bool Config::load(const char *path) {
 // Asynchronously update configuration
 void Config::taskRunner(void *p) {
     Config *t = (Config*) p;
+    // Merge new config with current for partial updates
+    JsonDocument merged = t->current;
+    Config::merge(merged.as<JsonVariant>(), t->newCfg.as<JsonVariantConst>());
     if (t->configChangeHandler) {
-        t->configChangeHandler(t->newCfg);
+        t->configChangeHandler(merged);
     }
 
-    t->current.clear();
-    Config::merge(t->current, t->newCfg);
     t->newCfg.clear();
+    t->current.clear();
+    t->current = merged;
     t->save();
-
     vTaskDelete(NULL);
 };
 
 void Config::merge(JsonVariant dst, JsonVariantConst src) {
-    if (src.is<JsonObjectConst>()) {
-        for (JsonPairConst kvp : src.as<JsonObjectConst>()) {
-            if (dst[kvp.key()]) {
-                Config::merge(dst[kvp.key()], kvp.value());
-
-                return;
-            }
-
-            dst[kvp.key()] = kvp.value();
-        }
+    if (!src.is<JsonObjectConst>()) {
+        dst.set(src);
 
         return;
     }
 
-    if (!src.isNull() && strcmp(src.as<const char*>(), "") != 0) {
-        dst.set(src);
+    for (JsonPairConst kvp : src.as<JsonObjectConst>()) {
+        if (dst[kvp.key()]) {
+            Config::merge(dst[kvp.key()], kvp.value());
+        } else {
+            dst[kvp.key()] = kvp.value();
+        }
     }
 };
 
@@ -74,6 +72,7 @@ void Config::initServer(AsyncWebServer *server) {
         JsonObject obj = json.as<JsonObject>();
         newCfg.set(obj);
         xTaskCreate(taskRunner, "Update config", 8192, this, 0, NULL);
+        newCfg.set(json);
     });
     server->addHandler(handler);
 };
