@@ -1,0 +1,325 @@
+#include "map.h"
+
+Map::Map(uint8_t w, uint8_t h) {
+    width = w;
+    height = h;
+};
+
+Map::~Map() {
+    jpeg.close();
+};
+
+void Map::print() {};
+
+bool Map::openImage() {
+    if (isOpen) {
+        return true;
+    }
+
+    isOpen = true;
+
+    return jpeg.open(MAP_PATH, openFile, closeFile, readFile, seekFile, draw);
+};
+
+void Map::closeImage() {
+    if (!isOpen) {
+        return;
+    }
+
+    isOpen = false;
+    delay(50); // wait for possible renderFrame() execution to finish
+    jpeg.close();
+    lastRender = 0;
+};
+
+void Map::setConfig(JsonVariantConst c) {
+    config.clear();
+    config.set(c);
+    xTaskCreate(asyncUpdateCrop, "Update crop area", 8192, this, 0, NULL);
+    Log::instance()->info("Updated map configuration\n");
+};
+
+void Map::initServer(AsyncWebServer *server) {
+    server->on("/map", HTTP_GET, [&](AsyncWebServerRequest *request) {
+        const AsyncWebHeader *accept = request->getHeader("Accept");
+        if (accept->value() != "image/jpeg") {
+            Log::instance()->error("Map request has unhandled accept: %s\n", accept->value());
+            request->send(400, "text/plain", "unhandled accept type");
+
+            return;
+        }
+        if (!pathExists(MAP_PATH)) {
+            Log::instance()->info("No map currently stored\n");
+            request->send(204);
+
+            return;
+        }
+
+        Log::instance()->info("Sending current map\n");
+        request->send(LittleFS, MAP_PATH, "image/jpeg");
+    });
+    server->on("/map", HTTP_DELETE, [&](AsyncWebServerRequest *request) {
+        closeImage();
+        Log::instance()->info("Deleting map\n");
+        if (!deleteFile(MAP_PATH)) {
+            Log::instance()->error("Error deleting map\n");
+            request->send(500, "text/plain", "error deleting map");
+
+            return;
+        }
+
+        Log::instance()->info("Map deleted\n");
+        request->send(204);
+    });
+    server->on("/map", HTTP_POST,
+        [&](AsyncWebServerRequest *request) {
+            Log::instance()->info("Map received\n");
+            const AsyncWebHeader *contentType = request->getHeader("Content-Type");
+            if (contentType->value() != "image/jpeg") {
+                Log::instance()->error("Uploaded map has unhandled content-type: %s\n", contentType->value());
+                request->send(400, "text/plain", "unhandled content type");
+
+                return;
+            }
+
+            openImage();
+            xTaskCreate(asyncUpdateCrop, "Update crop area", 8192, this, 0, NULL);
+            request->send(204);
+        },
+        nullptr,
+        [&](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+            const AsyncWebHeader *contentType = request->getHeader("Content-Type");
+            if (contentType->value() != "image/jpeg") {
+                Log::instance()->error("Uploaded map has unhandled content-type: %s\n", contentType->value());
+                request->send(400, "text/plain", "unhandled content type");
+
+                return;
+            }
+            if (index == 0) {
+                Log::instance()->debug("Receiving map: %d bytes\n", total);
+                if (total > MAX_IMAGE_SIZE) {
+                    Log::instance()->error("Map size %d exceeds maximum size %d\n", total, MAX_IMAGE_SIZE);
+                    request->send(400, "text/plain", "map is too big");
+
+                    return;
+                }
+                if (total > LittleFS.totalBytes() - LittleFS.usedBytes()) {
+                    Log::instance()->error("Map size %d is within limit, but disk has not enough free space (%d)\n", total, LittleFS.totalBytes() - LittleFS.usedBytes());
+                    request->send(500, "text/plain", "not enough free space");
+
+                    return;
+                }
+
+                closeImage();
+                if (!deleteFile(MAP_PATH)) {
+                    Log::instance()->warning("Error deleting previous map\n");
+                    request->send(500, "text/plain", "error deleting previous map");
+
+                    return;
+                }
+
+                Log::instance()->debug("Previous map deleted or not present\n");
+            }
+
+            Log::instance()->trace("Received map chunk: %d-%d (%d bytes)\n", index, index + len, len);
+            if (!writeBytes(MAP_PATH, data, len)) {
+                Log::instance()->error("Error writing map chunk\n");
+                request->send(500, "text/plain", "error writing map");
+
+                return;
+            }
+        }
+    );
+};
+
+void Map::loadMedia() {
+    if (!pathExists(MAP_PATH)) {
+        Log::instance()->info("No map stored in FLASH\n");
+
+        return;
+    }
+    if (!openImage()) {
+        Log::instance()->error("Error opening map from FLASH\n");
+
+        return;
+    }
+
+    xTaskCreate(asyncUpdateCrop, "Update crop area", 8192, this, 0, NULL);
+    Log::instance()->info("Loaded map from FLASH\n");
+};
+
+std::array<double, 2> Map::getPositionFromAPI() {
+    std::array<double, 2> pos;
+
+    // TODO
+    Log::instance()->info("Getting position from API (%s): %f, %f\n", config["url"].as<const char*>(), pos[0], pos[1]);
+
+    return pos;
+};
+
+std::array<double, 2> Map::getPosition() {
+    if (
+        strcmp(config["url"].as<const char*>(), "") != 0
+        && strcmp(config["method"].as<const char*>(), "") != 0
+        && strcmp(config["regex"].as<const char*>(), "") != 0
+    ) {
+        return getPositionFromAPI();
+    }
+
+    std::array<double, 2> pos;
+    if (
+        strcmp(config["latitude"].as<const char*>(), "") != 0
+        && strcmp(config["longitude"].as<const char*>(), "") != 0
+    ) {
+        pos[0] = strtod(config["latitude"].as<const char*>(), NULL);
+        pos[1] = strtod(config["longitude"].as<const char*>(), NULL);
+        Log::instance()->info("Getting position from configuration: %f, %f\n", pos[0], pos[1]);
+    }
+
+    return pos;
+};
+
+void Map::asyncUpdateCrop(void *p) {
+    Map *m = (Map*) p;
+    if (m->isUpdating) {
+        vTaskDelete(NULL);
+
+        return;
+    }
+
+    Log::instance()->debug("Updating crop asynchronously\n");
+    m->isUpdating = true;
+    m->updateCrop();
+    m->lastCropUpdate = millis();
+    m->isUpdating = false;
+    vTaskDelete(NULL);
+};
+
+void Map::updateCrop() {
+    if (!isOpen) {
+        return;
+    }
+
+    Log::instance()->info("Updating map crop area and position\n");
+    // Crop area
+    int imgW = jpeg.getWidth();
+    int imgH = jpeg.getHeight();
+    std::array<double, 2> position = getPosition();
+    double x = ((position[1] + 180.0) / 360.0) * imgW;
+    double y = ((90.0 - position[0]) / 180.0) * imgH;
+    int col = static_cast<int>(x / width);
+    int row = static_cast<int>(y / height);
+    cropArea[0] = width * col;
+    cropArea[1] = height * row;
+    // Position
+    cropPosition[0] = x - cropArea[0];
+    cropPosition[1] = y - cropArea[1];
+    // Offset position to fit the point in the panel
+    cropPosition[0] -= std::max(0, (cropPosition[0] + config["pointSize"].as<uint8_t>()) - width);
+    cropPosition[1] -= std::max(0, (cropPosition[1] + config["pointSize"].as<uint8_t>()) - height);
+};
+
+void Map::render(MatrixPanel_I2S_DMA *display) {
+    if (!isOpen) {
+        display->clearScreen();
+
+        return;
+    }
+    // Re-render at most once a second and avoid running while updating position
+    if (isUpdating || millis() - lastRender < 1000) {
+        return;
+    }
+    // Update crop area (and position) once every 15 minutes
+    if (millis() - lastCropUpdate > 1000 * 60 * 15) {
+        xTaskCreate(asyncUpdateCrop, "Update crop area", 8192, this, 0, NULL);
+
+        return;
+    }
+
+    // Re-open image to rewind file position, otherwise calling decode() more than once corrupts the displayed image
+    jpeg.open(MAP_PATH, openFile, closeFile, readFile, seekFile, draw);
+    lastRender = millis();
+    drawUserData data = {
+        display,
+        cropPosition,
+        config["pointSize"].as<uint8_t>(),
+        config["pointColor"].as<uint16_t>(),
+        config["trackColor"].as<uint16_t>()
+    };
+    jpeg.setUserPointer(static_cast<void*>(&data));
+    jpeg.setCropArea(cropArea[0], cropArea[1], width, height);
+    if (!jpeg.decode(0, 0, 0)) {
+        Log::instance()->error("Error decoding JPEG: %d\n", jpeg.getLastError());
+    }
+
+    jpeg.close();
+};
+
+void* Map::openFile(const char *path, int32_t *size) {
+    File *file = new File();
+    *file = LittleFS.open(path);
+    if (file) {
+        *size = file->size();
+
+        return static_cast<void*>(file);
+    }
+
+    delete file;
+
+    return NULL;
+};
+
+void Map::closeFile(void *pHandle) {
+    File *f = static_cast<File *>(pHandle);
+    if (f != NULL) {
+        f->close();
+        delete f;
+    }
+};
+
+int32_t Map::readFile(JPEGFILE *pFile, uint8_t *pBuf, int32_t iLen) {
+    int32_t iBytesRead;
+    iBytesRead = iLen;
+    File *f = static_cast<File *>(pFile->fHandle);
+    // Note: If you read a file all the way to the last byte, seek() stops working
+    if ((pFile->iSize - pFile->iPos) < iLen) {
+        iBytesRead = pFile->iSize - pFile->iPos - 1; // <-- ugly work-around
+    }
+    if (iBytesRead <= 0) {
+        return 0;
+    }
+
+    iBytesRead = (int32_t)f->read(pBuf, iBytesRead);
+    pFile->iPos = f->position();
+
+    return iBytesRead;
+};
+
+int32_t Map::seekFile(JPEGFILE *pFile, int32_t iPosition) {
+    File *f = static_cast<File *>(pFile->fHandle);
+    f->seek(iPosition);
+    pFile->iPos = (int32_t)f->position();
+
+    return pFile->iPos;
+};
+
+int Map::draw(JPEGDRAW *pDraw) {
+    drawUserData *data = static_cast<drawUserData*>(pDraw->pUser);
+    uint16_t *s = pDraw->pPixels;
+    int lastX = pDraw->x + pDraw->iWidth;
+    int lastY = pDraw->y + pDraw->iHeight;
+    for (int y = pDraw->y; y < lastY; y++) {
+        for (int x = pDraw->x; x < lastX; x++) {
+            data->display->drawPixel(x, y, *s++);
+        }
+    }
+
+    // Draw position
+    for (int y = 0; y < data->size; y++) {
+        for (int x = 0; x < data->size; x++) {
+            data->display->drawPixel(data->position[0] + x, data->position[1] + y, data->color);
+        }
+    }
+
+    return 1;
+};

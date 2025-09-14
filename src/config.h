@@ -14,7 +14,7 @@ class Config {
         JsonDocument newCfg;
         ConfigChangeHandler configChangeHandler;
         static void merge(JsonVariant, JsonVariantConst);
-        static void taskRunner(void*);
+        static void asyncUpdateConfig(void*);
 
     public:
         JsonDocument current;

@@ -19,8 +19,7 @@ bool Config::load(const char *path) {
     return !current.isNull();
 };
 
-// Asynchronously update configuration
-void Config::taskRunner(void *p) {
+void Config::asyncUpdateConfig(void *p) {
     Config *t = (Config*) p;
     // Merge new config with current for partial updates
     JsonDocument merged = t->current;
@@ -69,10 +68,8 @@ void Config::initServer(AsyncWebServer *server) {
 
         Log::instance()->info("Config JSON received\n");
         request->send(204);
-        JsonObject obj = json.as<JsonObject>();
-        newCfg.set(obj);
-        xTaskCreate(taskRunner, "Update config", 8192, this, 0, NULL);
         newCfg.set(json);
+        xTaskCreate(asyncUpdateConfig, "Update config", 8192, this, 0, NULL);
     });
     server->addHandler(handler);
 };

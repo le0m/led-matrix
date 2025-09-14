@@ -63,7 +63,7 @@ draw_mode ModeSelector::getMode() {
         } else if (M_PI_4 < ypr[1] && ypr[1] <= M_3PI_4) { // right
             return DRAW_MODE_LIFE;
         } else if (-M_3PI_4 <= ypr[1] && ypr[1] < -M_PI_4) { // left
-            return DRAW_MODE_TBD;
+            return DRAW_MODE_MAP;
         } else { // down
             return DRAW_MODE_QR;
         }

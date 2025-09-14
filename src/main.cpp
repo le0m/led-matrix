@@ -21,6 +21,7 @@ draw_mode drawMode = DRAW_MODE_NONE;
 WiFiController wifi;
 Life life(WIDTH, HEIGHT);
 Media media(WIDTH, HEIGHT);
+Map mapp(WIDTH, HEIGHT);
 QRCode qr(WIDTH, HEIGHT);
 AsyncWebServer server(80);
 ModeSelector selector;
@@ -60,6 +61,8 @@ void updateConfig(JsonDocument newConfig) {
         Log::instance()->setLevel(newConfig["log"]["level"].as<log_level>());
         Log::instance()->info("Log level changed: %s\n", Log::instance()->stringLevel().c_str());
     }
+
+    mapp.setConfig(newConfig["map"].as<JsonVariantConst>());
 };
 
 void setup() {
@@ -105,6 +108,9 @@ void setup() {
     // Initialize modules
     media.initServer(&server);
     media.loadMedia();
+    mapp.initServer(&server);
+    mapp.loadMedia();
+    mapp.setConfig(conf.current["map"].as<JsonVariantConst>());
     life.setFPS(FPS);
     conf.initServer(&server);
 
@@ -156,6 +162,10 @@ void loop() {
 
         case DRAW_MODE_IMAGE:
             media.render(display);
+            break;
+
+        case DRAW_MODE_MAP:
+            mapp.render(display);
             break;
 
         case DRAW_MODE_QR:
