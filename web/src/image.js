@@ -1,4 +1,4 @@
-import { humanFileSize, resetMessage, setDisabled, showMessage, handleFetch, readImage, canvas2jpeg } from './utils.js';
+import { humanFileSize, resetMessage, setDisabled, showMessage, handleFetch, readImage, canvasToJpeg } from './utils.js';
 import { parseGIF, decompressFrames } from 'gifuct-js';
 import { quantize, applyPalette, GIFEncoder } from 'gifenc';
 
@@ -67,7 +67,7 @@ const loadImage = async (file) => {
 
     // Draw preview
     context.drawImage(img, 0, 0, imgW, imgH, dstX, dstY, dstW, dstH);
-    imageData = await canvas2jpeg(canvas).then((blob) => blob.bytes());
+    imageData = await canvasToJpeg(canvas).then((blob) => blob.bytes());
     if (imageData.byteLength > maxSize) {
         console.error(`Not enough space for storing image (${humanFileSize(imageData.byteLength)}), max size allowed is ${humanFileSize(maxSize)}`);
         showMessage(feedbackMessage, `Resized image exceeds maximum size of ${humanFileSize(maxSize)}`, 'is-error');

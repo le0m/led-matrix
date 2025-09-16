@@ -1,4 +1,14 @@
-import { handleFetch, humanFileSize, resetMessage, setDisabled, showMessage, readImage, canvas2jpeg } from './utils.js';
+import {
+    handleFetch,
+    humanFileSize,
+    resetMessage,
+    setDisabled,
+    showMessage,
+    readImage,
+    canvasToJpeg,
+    hexToRgb,
+    rgbToHex
+} from './utils.js';
 
 const submitFile = document.getElementById('submit-map-file');
 setDisabled(submitFile, true);
@@ -19,7 +29,7 @@ pointSizeInput.value = 2;
 const locationColorInput = document.getElementById('location-color');
 locationColorInput.value = '#ff0000';
 const routeColorInput = document.getElementById('location-route-color');
-routeColorInput.value = '#27e7f5';
+routeColorInput.value = '#0000ff';
 const locationLatitude = document.getElementById('location-latitude');
 const locationLongitude = document.getElementById('location-longitude');
 const locationUrl = document.getElementById('location-url');
@@ -78,7 +88,7 @@ const handleFile = async (file) => {
     canvas.height = canvasPanel.height * 18;
     // Scale to canvas size and show preview
     context.drawImage(img, 0, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
-    imageData = await canvas2jpeg(canvas).then((blob) => blob.bytes());
+    imageData = await canvasToJpeg(canvas).then((blob) => blob.bytes());
     if (imageData.byteLength > maxSize) {
         console.error(`Not enough space for storing map (${humanFileSize(imageData.byteLength)}), max size allowed is ${humanFileSize(maxSize)}`);
         showMessage(feedbackMessage, `Resized map exceeds maximum size of ${humanFileSize(maxSize)}`, 'is-error');
@@ -214,6 +224,9 @@ export const map = (baseUrl) => {
         locationRegex.value = json?.map?.regex;
         locationBody.value = json?.map?.body;
         locationHeaders.value = json?.map?.headers;
+        pointSizeInput.value = json?.map?.pointSize;
+        locationColorInput.value = rgbToHex(json?.map?.pointColor ?? 63488); // red
+        routeColorInput.value = rgbToHex(json?.map?.trackColor ?? 31); // blue
         positions = json?.map?.positions ?? [];
     });
 
@@ -347,12 +360,8 @@ export const map = (baseUrl) => {
                     body: locationBody.value,
                     headers: locationHeaders.value,
                     pointSize: pointSizeInput.value,
-                    pointColor: locationColorInput.value.length
-                        ? parseInt(locationColorInput.value.replace('#', ''), 16)
-                        : 63488, // red
-                    trackColor: routeColorInput.value.length
-                        ? parseInt(routeColorInput.value.replace('#', ''), 16)
-                        : 63488, // red
+                    pointColor: hexToRgb(locationColorInput.value || '#ff0000'),
+                    trackColor: hexToRgb(routeColorInput.value || '#0000ff'),
                 }
             }),
         });

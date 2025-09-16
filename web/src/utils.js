@@ -110,7 +110,7 @@ export const readImage = (data) => new Promise((res, rej) => {
  * @param {HTMLCanvasElement} canvas
  * @returns {Promise<Blob>}
  */
-export const canvas2jpeg = (canvas) => new Promise((res, rej) =>
+export const canvasToJpeg = (canvas) => new Promise((res, rej) =>
     canvas.toBlob((blob) => {
         if (!blob) {
             rej('Error generating scaled image');
@@ -121,3 +121,45 @@ export const canvas2jpeg = (canvas) => new Promise((res, rej) =>
         res(blob);
     }, 'image/jpeg')
 );
+
+/**
+ * Convert hex string to rgb565.
+ *
+ * @param {string} hex Hexadecimal color
+ * @returns {number}
+ */
+export const hexToRgb = (hex) => {
+    const rgb = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/.exec(hex);
+    if (rgb === null) {
+        console.error(`Hex to rgb regex failed: ${hex}`);
+
+        return null;
+    }
+
+    const r = parseInt(rgb[1], 16);
+    const g = parseInt(rgb[2], 16);
+    const b = parseInt(rgb[3], 16);
+
+    return ((r & 0xf8) << 8) | ((g & 0xfc) << 3) | (b >> 3);
+};
+
+/**
+ * Convert rgb565 to hex string.
+ *
+ * @param {number} rgb RGB565 color
+ * @returns {string}
+ */
+export const rgbToHex = (rgb) => {
+    const rgb565 = [
+        (rgb & 0xf800) >> 11,
+        (rgb & 0x07e0) >> 5,
+        rgb & 0x001f
+    ];
+    const rgb888 = [
+        Math.floor(rgb565[0] * 255 /  31 + 0.5),
+        Math.floor(rgb565[1] * 255 /  63 + 0.5),
+        Math.floor(rgb565[2] * 255 /  31 + 0.5)
+    ];
+
+    return `#${rgb888.map((b) => b.toString(16).padStart(2, '0')).join('')}`;
+};

@@ -1,1 +1,1 @@
-{"wifi":{"ssid":"","password":""},"panel":{"brightness":63},"log":{"level":2},"map":{"latitude":"","longitude":"","url":"","method":"GET","regex":"","body":"","headers":"","pointSize":2,"pointColor":63488,"trackColor":63488,"positions":[]}}
+{"wifi":{"ssid":"","password":""},"panel":{"brightness":63},"log":{"level":2},"map":{"latitude":"","longitude":"","url":"","method":"GET","regex":"","body":"","headers":"","pointSize":2,"pointColor":63488,"trackColor":31,"positions":[]}}
