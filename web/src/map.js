@@ -187,8 +187,8 @@ const getFromAPI = async () => {
         return undefined;
     }
 
-    showMessage(locationTestMessage, 'Regex matched', 'is-success');
     matches.shift();
+    showMessage(locationTestMessage, `Regex matched: ${matches}`, 'is-success');
 
     return matches.map((m) => parseFloat(m.trim()));
 };
@@ -355,7 +355,7 @@ export const map = (baseUrl) => {
                     latitude: locationLatitude.value,
                     longitude: locationLongitude.value,
                     url: locationUrl.value,
-                    method: locationMethod.value,
+                    method: (locationMethod.value || 'GET').toUpperCase(),
                     regex: locationRegex.value,
                     body: locationBody.value,
                     headers: locationHeaders.value,

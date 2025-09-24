@@ -10,6 +10,7 @@
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 
 #define MAP_PATH "/map.jpeg"
+#define UPDATE_CROP_AREA 1000 * 60 * 15
 
 class Map : public Renderer {
     private:
@@ -21,6 +22,7 @@ class Map : public Renderer {
             uint16_t track;
         } drawUserData;
         JPEGDEC jpeg;
+        bool forceCropUpdate = false;
         ulong lastRender = 0;
         ulong lastCropUpdate = 0;
         uint16_t cropArea[2];

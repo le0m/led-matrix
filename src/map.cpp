@@ -35,7 +35,7 @@ void Map::closeImage() {
 void Map::setConfig(JsonVariantConst c) {
     config.clear();
     config.set(c);
-    xTaskCreate(asyncUpdateCrop, "Update crop area", 8192, this, 0, NULL);
+    forceCropUpdate = true;
     Log::instance()->info("Updated map configuration\n");
 };
 
@@ -83,7 +83,7 @@ void Map::initServer(AsyncWebServer *server) {
             }
 
             openImage();
-            xTaskCreate(asyncUpdateCrop, "Update crop area", 8192, this, 0, NULL);
+            forceCropUpdate = true;
             request->send(204);
         },
         nullptr,
@@ -144,7 +144,7 @@ void Map::loadMedia() {
         return;
     }
 
-    xTaskCreate(asyncUpdateCrop, "Update crop area", 8192, this, 0, NULL);
+    forceCropUpdate = true;
     Log::instance()->info("Loaded map from FLASH\n");
 };
 
@@ -158,16 +158,15 @@ std::array<double, 2> Map::getPositionFromAPI() {
 };
 
 std::array<double, 2> Map::getPosition() {
+    std::array<double, 2> pos;
     if (
         strcmp(config["url"].as<const char*>(), "") != 0
         && strcmp(config["method"].as<const char*>(), "") != 0
         && strcmp(config["regex"].as<const char*>(), "") != 0
     ) {
-        return getPositionFromAPI();
-    }
-
-    std::array<double, 2> pos;
-    if (
+        pos = getPositionFromAPI();
+        Log::instance()->info("Getting position from API (%s): %f, %f\n", config["url"].as<const char*>(), pos[0], pos[1]);
+    } else if (
         strcmp(config["latitude"].as<const char*>(), "") != 0
         && strcmp(config["longitude"].as<const char*>(), "") != 0
     ) {
@@ -181,16 +180,10 @@ std::array<double, 2> Map::getPosition() {
 
 void Map::asyncUpdateCrop(void *p) {
     Map *m = (Map*) p;
-    if (m->isUpdating) {
-        vTaskDelete(NULL);
-
-        return;
-    }
-
     Log::instance()->debug("Updating crop asynchronously\n");
-    m->isUpdating = true;
     m->updateCrop();
     m->lastCropUpdate = millis();
+    m->forceCropUpdate = false;
     m->isUpdating = false;
     vTaskDelete(NULL);
 };
@@ -230,7 +223,8 @@ void Map::render(MatrixPanel_I2S_DMA *display) {
         return;
     }
     // Update crop area (and position) once every 15 minutes
-    if (millis() - lastCropUpdate > 1000 * 60 * 15) {
+    if (forceCropUpdate || millis() - lastCropUpdate > UPDATE_CROP_AREA) {
+        isUpdating = true;
         xTaskCreate(asyncUpdateCrop, "Update crop area", 8192, this, 0, NULL);
 
         return;
