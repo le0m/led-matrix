@@ -25,7 +25,8 @@ def pre_gzip_static(source, target, env):
 	static_build_path = os.path.join(env.get('PROJECT_DIR'), 'web/dist')
 	www_dir_path = os.path.join(env.get('PROJECT_DIR'), 'data', 'www')
 	print('Building JS app in "web" to "web/dist"')
-	env.Execute("pnpm -C web release")
+	if env.Execute("pnpm -C web release") > 0:
+		raise ValueError('JS app build failed')
 	print('Compressing files from "web/dist" to "data/www" directory')
 	if os.path.exists(www_dir_path):
 		shutil.rmtree(www_dir_path)
