@@ -174,7 +174,7 @@ bool Map::setHeaders(HTTPClient &client, const char *headers) {
             }
 
             client.setAuthorizationType(value.substr(0, i).c_str());
-            client.setAuthorization(value.substr(i).c_str());
+            client.setAuthorization(value.substr(i + 1).c_str());
             continue;
         }
         if (key.equalsIgnoreCase("User-Agent")) {

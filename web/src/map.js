@@ -138,15 +138,21 @@ const handleFile = async (file) => {
 };
 
 const getLatLon = async () => {
+    let pos = undefined;
     if (locationUrl.value && locationMethod.value && locationRegex.value) {
-        return getFromAPI();
+        const api = await getFromAPI();
+        if (api?.length === 2) {
+            console.log('Got position from API', api);
+            pos = api;
+        }
     }
 
-    if (locationLatitude.value.trim() && locationLongitude.value.trim()) {
-        return [parseFloat(locationLatitude.value.trim()), parseFloat(locationLongitude.value.trim())];
+    if (!pos?.every(Boolean) && locationLatitude.value.trim() && locationLongitude.value.trim()) {
+        pos = [parseFloat(locationLatitude.value.trim()), parseFloat(locationLongitude.value.trim())];
+        console.log('Got position from config', pos);
     }
 
-    return undefined;
+    return pos;
 };
 
 const getFromAPI = async () => {
@@ -165,9 +171,16 @@ const getFromAPI = async () => {
         }
     }
 
-    let headers = undefined;
+    let headers = new Headers();
     if (locationHeaders.value) {
-        headers = JSON.parse(locationHeaders.value);
+        headers = new Headers(JSON.parse(locationHeaders.value));
+    }
+    if (url.username && url.password) {
+        const auth = `${url.username}:${url.password}`;
+        const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(auth)));
+        headers.set("Authorization", `Basic ${b64}`);
+        url.username = '';
+        url.password = '';
     }
 
     showMessage(locationTestMessage, 'Sending request...', 'is-primary');
