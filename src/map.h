@@ -2,12 +2,14 @@
 #define _MAP_H
 
 #include <string>
+#include <regex>
 #include "log.h"
 #include "renderer.h"
 #include "filesystem.h"
 #include <ArduinoJson.h>
 #include <JPEGDEC.h>
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
+#include <HTTPClient.h>
 
 #define MAP_PATH "/map.jpeg"
 #define UPDATE_CROP_AREA 1000 * 60 * 15
@@ -38,6 +40,8 @@ class Map : public Renderer {
         static void closeFile(void*);
         static int32_t readFile(JPEGFILE*, uint8_t*, int32_t);
         static int32_t seekFile(JPEGFILE*, int32_t);
+        bool setHeaders(HTTPClient&, const char*);
+        std::array<double, 2> matchRegex(String, const char*);
         std::array<double, 2> getPositionFromAPI();
         std::array<double, 2> getPosition();
         void updateCrop();

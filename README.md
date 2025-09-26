@@ -24,7 +24,7 @@ See [gallery](#gallery) for photos.
 - [FastLED](https://github.com/FastLED/FastLED), for color conversion functions and other utilities
 - the ESP32Async project and their [AsyncTCP](https://github.com/ESP32Async/AsyncTCP)/[ESPAsyncWebServer](https://github.com/ESP32Async/ESPAsyncWebServer) libraries
 - [ArduinoJSON](https://github.com/bblanchon/ArduinoJson), for JSON de/serialization
-- [AnimatedGIF](https://github.com/bitbank2/AnimatedGIF), for decoding and drawing GIFs
+- [AnimatedGIF](https://github.com/bitbank2/AnimatedGIF) and [JPEGDEC](https://github.com/bitbank2/JPEGDEC), for decoding GIFs and JPEGs
 - project Nayuki's [qr-code-generator](https://github.com/nayuki/QR-Code-generator), for generating QR codes (included in `lib/` directory)
 - [i2cdevlib](https://github.com/jrowberg/i2cdevlib), for reading the MPU6050 sensor (included in `lib/` directory)
 - [NES.css](https://github.com/nostalgic-css/NES.css), for the NES-styled theme
@@ -40,7 +40,7 @@ This is why the `pathExists()` method exists.
 
 # Usage
 
-On first boot the esp32 creates a WiFi network with name `esp32-led-matrix` and password `daftpunk` (hardcoded in `src/wifi.h`). Connect to it, turn the frame upside down and scan the QR code to visit the web UI, where the WiFi name and password can be configured (stored in plain JSON in the flash memory). The esp32 will then connect to the provided WiFi and show a different QR code to visit the web UI on that network.
+On first boot the esp32 creates a WiFi network with name `esp32-led-matrix` and password `daftpunk` (hardcoded in `src/wifi.h`). Connect to it, turn the frame upside down and scan the QR code to visit the web UI, where the WiFi SSID and password can be configured (stored in plain JSON in the flash memory). The esp32 will then connect to the provided WiFi and show a different QR code to visit the web UI on that network.
 
 ## Display modes
 
@@ -48,15 +48,17 @@ The LED panel has 4 display modes, depending on the frame orientation:
 - ↑ shows image or GIF uploaded through the web UI
 - → shows a [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway's_Game_of_Life) game
 - ↓ shows the QR code
-- ← shows nothing, TBD what to do
+- ← shows a position on a map
 
 ## Web UI
 
 - WiFi settings
 - brightness (0-255)
-- upload image or GIF, with preview of the scaled-down version; this file will be stored in the flash memory and loaded on boot, so the size is limited depending on the model of esp32 used (mine has 1.4MB and I'm reserving 0.4MB for the project's static data)
+- upload image or GIF, with preview of the scaled-down version; this file will be stored in the flash memory and loaded on boot, so the size is limited depending on the model of esp32 used (mine has 1.4MB and I'm reserving some for the project's static data)
+- map settings (upload map image, set position, use remote API)
 - upload firmware updates (OTA)
 - application logs (by default the logs are sent only if the web UI is loaded by at least 1 user, use the compile variable `LOG_QUEUE` to enable a queue of up to 50 messages that will be delivered once a user connects)
+- resource usage and system info
 
 # Gallery
 
@@ -123,5 +125,9 @@ Some LEDs have been harmed in the development process. Our thoughts go to all th
 - setting for map remote API pull time (15m, 30m, 1h)
 - support PNG
 - consolidate requests from web UI
-- implement map zoom (need scaling on esp32)
-- implement other position centering methods (center on point, use a margin to move the view before the position reaches the panel border, ...)
+- reduce heap usage (close and open "modes" when rotating?)
+- replace `WiFiClient` with `WiFiClientSecure` to support HTTPS (it currently does not have enough free heap for SSL stuff)
+- map:
+    - zoom (need scaling on esp32)
+    - other position centering methods (center on point, use a margin to move the view before the position reaches the panel border, ...)
+    - store previous positions and show route

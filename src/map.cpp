@@ -148,17 +148,140 @@ void Map::loadMedia() {
     Log::instance()->info("Loaded map from FLASH\n");
 };
 
-std::array<double, 2> Map::getPositionFromAPI() {
-    std::array<double, 2> pos;
+bool Map::setHeaders(HTTPClient &client, const char *headers) {
+    JsonDocument h;
+    DeserializationError err = deserializeJson(h, headers);
+    if (err) {
+        Log::instance()->error("Error deserializing headers: %s\n", err.c_str());
 
-    // TODO
-    Log::instance()->info("Getting position from API (%s): %f, %f\n", config["url"].as<const char*>(), pos[0], pos[1]);
+        return false;
+    }
+    if (!h.is<JsonObjectConst>()) {
+        Log::instance()->error("Header is not a JSON object\n");
+
+        return false;
+    }
+
+    for (JsonPairConst kvp : h.as<JsonObjectConst>()) {
+        String key(kvp.key().c_str());
+        std::string value = kvp.value().as<std::string>();
+        if (key.equalsIgnoreCase("Authorization")) {
+            size_t i = value.find(' ');
+            if (i == std::string::npos) {
+                Log::instance()->error("Missing header authorization type or value\n");
+
+                return false;
+            }
+
+            client.setAuthorizationType(value.substr(0, i).c_str());
+            client.setAuthorization(value.substr(i).c_str());
+            continue;
+        }
+        if (key.equalsIgnoreCase("User-Agent")) {
+            client.setUserAgent(value.c_str());
+            continue;
+        }
+        if (key.equalsIgnoreCase("Connection")) {
+            client.setReuse(strcmp(value.c_str(), "close") != 0);
+            continue;
+        }
+        if (key.equalsIgnoreCase("Host")) {
+            continue;
+        }
+
+        client.addHeader(key.c_str(), value.c_str());
+    }
+
+    return true;
+};
+
+std::array<double, 2> Map::matchRegex(String res, const char *r) {
+    std::array<double, 2> pos = { 0, 0 };
+    std::regex regex(r);
+    std::smatch matches;
+    std::string str = std::string(res.c_str());
+    if (!std::regex_search(str, matches, regex)) {
+        Log::instance()->error("Regex %s did not match position API response:\n%s\n\n", r, str.c_str());
+
+        return pos;
+    }
+    if (matches.size() != 3) {
+        Log::instance()->error("Regex %s found %d matches in position API response, need 2:\n%s\n\n", r, matches.size() - 1, str.c_str());
+
+        return pos;
+    }
+
+    pos[0] = strtod(matches.str(1).c_str(), NULL);
+    pos[1] = strtod(matches.str(2).c_str(), NULL);
+
+    return pos;
+};
+
+std::array<double, 2> Map::getPositionFromAPI() {
+    std::array<double, 2> pos = { 0, 0 };
+    WiFiClient client;
+    HTTPClient http;
+    http.setReuse(false);
+    http.setConnectTimeout(10000);
+    http.setTimeout(60000);
+    String u = config["url"].as<String>();
+    String m = config["method"].as<String>();
+    const char *r = config["regex"].as<const char*>();
+    if (u.isEmpty()) {
+        Log::instance()->error("Position API URL is not set\n");
+
+        return pos;
+    }
+    if (m.isEmpty()) {
+        Log::instance()->error("Position API method is not set\n");
+
+        return pos;
+    }
+    if (strcmp(r, "") == 0) {
+        Log::instance()->error("Position API regexp is not set\n");
+
+        return pos;
+    }
+
+    // Apply query params
+    String b = config["body"].as<String>();
+    if (m.equalsIgnoreCase("GET") && !b.isEmpty()) {
+        if (!u.concat(b)) {
+            Log::instance()->error("Error adding query parameters\n");
+
+            return pos;
+        }
+    }
+
+    http.begin(client, u);
+    // Apply headers
+    const char *hs = config["headers"].as<const char*>();
+    if (strcmp(hs, "") != 0 && !setHeaders(http, hs)) {
+        return pos;
+    }
+
+    // Send request
+    int code;
+    if (m.equalsIgnoreCase("POST")) {
+        code = http.POST(b);
+    } else {
+        code = http.GET();
+    }
+    if (code < 0) {
+        Log::instance()->error("Error in API request: %d %s\n", code, http.errorToString(code).c_str());
+
+        return pos;
+    }
+
+    // Match regex
+    String res = http.getString();
+    pos = matchRegex(res, r);
 
     return pos;
 };
 
 std::array<double, 2> Map::getPosition() {
-    std::array<double, 2> pos;
+    std::array<double, 2> pos = { 0, 0 };
     if (
         strcmp(config["url"].as<const char*>(), "") != 0
         && strcmp(config["method"].as<const char*>(), "") != 0
@@ -166,8 +289,11 @@ std::array<double, 2> Map::getPosition() {
     ) {
         pos = getPositionFromAPI();
         Log::instance()->info("Getting position from API (%s): %f, %f\n", config["url"].as<const char*>(), pos[0], pos[1]);
-    } else if (
-        strcmp(config["latitude"].as<const char*>(), "") != 0
+    }
+    // default to static position, if available
+    if (
+        pos[0] == 0 && pos[1] == 0
+        && strcmp(config["latitude"].as<const char*>(), "") != 0
         && strcmp(config["longitude"].as<const char*>(), "") != 0
     ) {
         pos[0] = strtod(config["latitude"].as<const char*>(), NULL);
