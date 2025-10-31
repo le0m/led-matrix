@@ -31,6 +31,7 @@ void Config::asyncUpdateConfig(void *p) {
     t->newCfg.clear();
     t->current.clear();
     t->current = merged;
+    t->current.shrinkToFit();
     t->save();
     vTaskDelete(NULL);
 };

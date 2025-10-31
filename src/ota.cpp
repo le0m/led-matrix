@@ -17,9 +17,9 @@ void OTA::initServer(AsyncWebServer* server) {
 
         uint8_t mode = U_FLASH;
         String modeParam = request->getParam("mode")->value();
-        if (modeParam == "filesystem") {
+        if (modeParam.equalsIgnoreCase("filesystem")) {
             mode = U_SPIFFS;
-        } else if (modeParam == "firmware") {
+        } else if (modeParam.equalsIgnoreCase("firmware")) {
             mode = U_FLASH;
         } else {
             Log::instance()->error("Unknown update mode %s\n", modeParam);

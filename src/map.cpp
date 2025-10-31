@@ -35,6 +35,7 @@ void Map::closeImage() {
 void Map::setConfig(JsonVariantConst c) {
     config.clear();
     config.set(c);
+    config.shrinkToFit();
     forceCropUpdate = true;
     Log::instance()->info("Updated map configuration\n");
 };
