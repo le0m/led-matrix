@@ -16,8 +16,8 @@ class Renderer {
         virtual void initServer(AsyncWebServer*) = 0;
         virtual void render(MatrixPanel_I2S_DMA*) = 0;
         virtual void print() = 0;
-        virtual void open() = 0;
-        virtual void close() = 0;
+        virtual bool open() = 0;
+        virtual bool close() = 0;
 };
 
 #endif

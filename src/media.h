@@ -34,8 +34,8 @@ class Media : public Renderer {
         virtual void initServer(AsyncWebServer*);
         virtual void render(MatrixPanel_I2S_DMA*);
         virtual void print();
-        virtual void open();
-        virtual void close();
+        virtual bool open();
+        virtual bool close();
 };
 
 #endif

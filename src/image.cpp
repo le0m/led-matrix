@@ -12,6 +12,7 @@ bool Image::open(const char *path) {
     }
 
     filePath = path;
+    lastRender = 0;
     isOpen = true;
 
     return jpeg.open(filePath, openFile, closeFile, readFile, seekFile, draw);
@@ -29,20 +30,16 @@ void Image::close() {
 };
 
 void Image::renderFrame(MatrixPanel_I2S_DMA  *display) {
-    // Re-render at most once a second
-    if (!isOpen || millis() - lastRender < 1000) {
+    // Render once
+    if (!isOpen || lastRender > 0) {
         return;
     }
 
-    // Re-open image to rewind file position, otherwise calling decode() more than once corrupts the displayed image
-    jpeg.open(filePath, openFile, closeFile, readFile, seekFile, draw);
     lastRender = millis();
     jpeg.setUserPointer(static_cast<void*>(display));
     if (!jpeg.decode(0, 0, 0)) {
         Log::instance()->error("Error decoding JPEG: %d\n", jpeg.getLastError());
     }
-
-    jpeg.close();
 };
 
 void* Image::openFile(const char *path, int32_t *size) {

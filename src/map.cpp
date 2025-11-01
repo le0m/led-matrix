@@ -9,36 +9,24 @@ Map::~Map() {
     close();
 };
 
-void Map::open() {
-    loadMedia();
+bool Map::open() {
+    return loadMedia();
 };
 
-void Map::close() {
-    closeImage();
-};
-
-void Map::print() {};
-
-bool Map::openImage() {
-    if (isOpen) {
-        return true;
-    }
-
-    isOpen = true;
-
-    return jpeg.open(MAP_PATH, openFile, closeFile, readFile, seekFile, draw);
-};
-
-void Map::closeImage() {
+bool Map::close() {
     if (!isOpen) {
-        return;
+        return true;
     }
 
     isOpen = false;
     delay(50); // wait for possible renderFrame() execution to finish
     jpeg.close();
     lastRender = 0;
+
+    return true;
 };
+
+void Map::print() {};
 
 void Map::setConfig(JsonVariantConst c) {
     config.clear();
@@ -68,7 +56,7 @@ void Map::initServer(AsyncWebServer *server) {
         request->send(LittleFS, MAP_PATH, "image/jpeg");
     });
     server->on("/map", HTTP_DELETE, [&](AsyncWebServerRequest *request) {
-        closeImage();
+        close();
         Log::instance()->info("Deleting map\n");
         if (!deleteFile(MAP_PATH)) {
             Log::instance()->error("Error deleting map\n");
@@ -120,7 +108,7 @@ void Map::initServer(AsyncWebServer *server) {
                 }
 
                 isUpdating = true;
-                closeImage();
+                close();
                 if (!deleteFile(MAP_PATH)) {
                     Log::instance()->warning("Error deleting previous map\n");
                     request->send(500, "text/plain", "error deleting previous map");
@@ -148,17 +136,19 @@ bool Map::loadMedia() {
     }
 
     if (!pathExists(MAP_PATH)) {
-        Log::instance()->info("No map stored in FLASH\n");
+        Log::instance()->trace("No map stored in FLASH\n");
 
         return false;
     }
-    if (!openImage()) {
+
+    if (!jpeg.open(MAP_PATH, openFile, closeFile, readFile, seekFile, draw)) {
         Log::instance()->error("Error opening map from FLASH\n");
 
         return false;
     }
 
-    forceCropUpdate = true;
+    lastRender = 0;
+    isOpen = true;
     Log::instance()->info("Loaded map from FLASH\n");
 
     return true;
@@ -248,20 +238,24 @@ std::array<double, 2> Map::getPositionFromAPI() {
 
         return pos;
     }
-    if (m.isEmpty()) {
-        Log::instance()->error("Position API method is not set\n");
-
-        return pos;
-    }
     if (strcmp(r, "") == 0) {
         Log::instance()->error("Position API regexp is not set\n");
 
         return pos;
     }
+    if (m.isEmpty()) {
+        m = "GET";
+    }
 
     // Apply query params
     String b = config["body"].as<String>();
     if (m.equalsIgnoreCase("GET") && !b.isEmpty()) {
+        // Need a "/" after hostname, otherwise the query parameters end up in the DNS query
+        if (!u.endsWith("/") && !u.concat("/")) {
+            Log::instance()->error("Error adding query parameters\n");
+
+            return pos;
+        }
         if (!u.concat(b)) {
             Log::instance()->error("Error adding query parameters\n");
 
@@ -304,7 +298,7 @@ std::array<double, 2> Map::getPosition() {
         && strcmp(config["regex"].as<const char*>(), "") != 0
     ) {
         pos = getPositionFromAPI();
-        Log::instance()->info("Getting position from API (%s): %f, %f\n", config["url"].as<const char*>(), pos[0], pos[1]);
+        Log::instance()->info("Position from API (%s): %f, %f\n", config["url"].as<const char*>(), pos[0], pos[1]);
     }
     // default to static position, if available
     if (
@@ -314,7 +308,7 @@ std::array<double, 2> Map::getPosition() {
     ) {
         pos[0] = strtod(config["latitude"].as<const char*>(), NULL);
         pos[1] = strtod(config["longitude"].as<const char*>(), NULL);
-        Log::instance()->info("Getting position from configuration: %f, %f\n", pos[0], pos[1]);
+        Log::instance()->info("Position from configuration: %f, %f\n", pos[0], pos[1]);
     }
 
     return pos;
@@ -326,6 +320,8 @@ void Map::asyncUpdateCrop(void *p) {
     m->updateCrop();
     m->lastCropUpdate = millis();
     m->forceCropUpdate = false;
+    // Close to re-render in next render() call
+    m->close();
     m->isUpdating = false;
     vTaskDelete(NULL);
 };
@@ -355,19 +351,18 @@ void Map::updateCrop() {
 };
 
 void Map::render(MatrixPanel_I2S_DMA *display) {
-    if (!isOpen) {
-        display->clearScreen();
-
-        return;
-    }
-
-    // Re-render at most once a second and avoid running while updating
-    if (isUpdating || millis() - lastRender < 1000) {
+    if (isUpdating) {
         return;
     }
 
     // Call to open is here because trying to open in webserver endpoint (right after finished writing) causes a panic and reboot
     if (!loadMedia()) {
+        return;
+    }
+
+    if (!isOpen) {
+        display->clearScreen();
+
         return;
     }
 
@@ -379,8 +374,11 @@ void Map::render(MatrixPanel_I2S_DMA *display) {
         return;
     }
 
-    // Re-open image to rewind file position, otherwise calling decode() more than once corrupts the displayed image
-    jpeg.open(MAP_PATH, openFile, closeFile, readFile, seekFile, draw);
+    // Render once
+    if (lastRender > 0) {
+        return;
+    }
+
     lastRender = millis();
     drawUserData data = {
         display,
@@ -394,8 +392,6 @@ void Map::render(MatrixPanel_I2S_DMA *display) {
     if (!jpeg.decode(0, 0, 0)) {
         Log::instance()->error("Error decoding JPEG: %d\n", jpeg.getLastError());
     }
-
-    jpeg.close();
 };
 
 void* Map::openFile(const char *path, int32_t *size) {

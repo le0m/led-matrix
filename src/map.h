@@ -33,8 +33,6 @@ class Map : public Renderer {
         bool isOpen = false;
         JsonDocument config;
         static void asyncUpdateCrop(void*);
-        bool openImage();
-        void closeImage();
         bool loadMedia();
         static int draw(JPEGDRAW*);
         static void* openFile(const char*, int32_t*);
@@ -54,8 +52,8 @@ class Map : public Renderer {
         void setConfig(JsonVariantConst);
         virtual void render(MatrixPanel_I2S_DMA*);
         virtual void print();
-        virtual void open();
-        virtual void close();
+        virtual bool open();
+        virtual bool close();
 };
 
 #endif

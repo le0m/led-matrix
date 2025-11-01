@@ -125,7 +125,7 @@ Some LEDs have been harmed in the development process. Our thoughts go to all th
 - setting for map remote API pull time (15m, 30m, 1h)
 - support PNG
 - consolidate requests from web UI
-- reduce heap usage (close and open "modes" when rotating?)
+- reduce heap usage
 - replace `WiFiClient` with `WiFiClientSecure` to support HTTPS (it currently does not have enough free heap for SSL stuff)
 - map:
     - zoom (need scaling on esp32)

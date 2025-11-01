@@ -7,9 +7,13 @@ QRCode::QRCode(uint8_t w, uint8_t h) {
 
 QRCode::~QRCode() {};
 
-void QRCode::open() {};
+bool QRCode::open() {
+    return true;
+};
 
-void QRCode::close() {};
+bool QRCode::close() {
+    return true;
+};
 
 bool QRCode::setText(String str) {
     uint8_t tempBuffer[qrcodegen_BUFFER_LEN_FOR_VERSION(2)];

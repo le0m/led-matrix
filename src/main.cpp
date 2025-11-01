@@ -26,6 +26,7 @@ QRCode qr(WIDTH, HEIGHT);
 AsyncWebServer server(80);
 ModeSelector selector;
 Config conf(updateConfig);
+Renderer *currentMode = nullptr;
 
 void updateQrText() {
     String url = wifi.getUrl();
@@ -40,27 +41,33 @@ bool changeMode(draw_mode newMode) {
         return false;
     }
 
-    life.close();
-    qr.close();
-    media.close();
-    mapp.close();
+    if (currentMode != nullptr) {
+        currentMode->close();
+    }
+
     switch (newMode) {
         case DRAW_MODE_LIFE:
-            life.open();
+            currentMode = &life;
             break;
         case DRAW_MODE_QR:
-            qr.open();
+            currentMode = &qr;
             break;
         case DRAW_MODE_IMAGE:
-            media.open();
+            currentMode = &media;
             break;
         case DRAW_MODE_MAP:
-            mapp.open();
+            currentMode = &mapp;
             break;
 
         default:
+            currentMode = nullptr;
             break;
     }
+
+    if (currentMode != nullptr) {
+        currentMode->open();
+    }
+
     drawMode = newMode;
     Log::instance()->info("Changed mode to %d\n", drawMode);
     display->clearScreen();
@@ -180,21 +187,7 @@ void loop() {
         }
     }
 
-    switch (drawMode) {
-        case DRAW_MODE_LIFE:
-            life.render(display);
-            break;
-
-        case DRAW_MODE_IMAGE:
-            media.render(display);
-            break;
-
-        case DRAW_MODE_MAP:
-            mapp.render(display);
-            break;
-
-        case DRAW_MODE_QR:
-            qr.render(display);
-            break;
+    if (currentMode != nullptr) {
+        currentMode->render(display);
     }
 };

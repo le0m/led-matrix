@@ -9,13 +9,15 @@ Media::~Media() {
     close();
 };
 
-void Media::open() {
-    loadMedia();
+bool Media::open() {
+    return loadMedia();
 };
 
-void Media::close() {
+bool Media::close() {
     gif.close();
     image.close();
+
+    return true;
 };
 
 void Media::print() {
@@ -234,7 +236,7 @@ bool Media::loadMedia() {
         return false;
     }
 
-    Log::instance()->info("No media stored in FLASH\n");
+    Log::instance()->trace("No media stored in FLASH\n");
     mediaType = MEDIA_TYPE_NONE;
 
     return false;

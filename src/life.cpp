@@ -9,25 +9,29 @@ Life::~Life() {
     close();
 };
 
-void Life::open() {
+bool Life::open() {
     if (isOpen) {
-        return;
+        return true;
     }
 
     world = (Cell*)malloc(width * height * sizeof(Cell));
     generation = 0;
     isOpen = true;
+
+    return true;
 }
 
-void Life::close() {
+bool Life::close() {
     if (!isOpen) {
-        return;
+        return true;
     }
 
     isOpen = false;
     delay(50); // wait for possible render() execution to finish
     free(world);
     generation = 0;
+
+    return true;
 }
 
 void Life::setFPS(uint8_t f) {
