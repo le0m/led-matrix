@@ -120,7 +120,6 @@ Some LEDs have been harmed in the development process. Our thoughts go to all th
 # TODOs
 
 - add FPS and other Life config
-- modeselector: prevent random wrong reads, use multiple reads in the span of some seconds
 - music visualizer (needs mic)
 - setting for map remote API pull time (15m, 30m, 1h)
 - support PNG

@@ -59,15 +59,15 @@ draw_mode ModeSelector::getMode() {
         //     ypr[2]
         // );
         if (-M_PI_4 <= ypr[1] && ypr[1] <= M_PI_4) { // up
-            return DRAW_MODE_IMAGE;
+            lastRead = DRAW_MODE_IMAGE;
         } else if (M_PI_4 < ypr[1] && ypr[1] <= M_3PI_4) { // right
-            return DRAW_MODE_LIFE;
+            lastRead = DRAW_MODE_LIFE;
         } else if (-M_3PI_4 <= ypr[1] && ypr[1] < -M_PI_4) { // left
-            return DRAW_MODE_MAP;
+            lastRead = DRAW_MODE_MAP;
         } else { // down
-            return DRAW_MODE_QR;
+            lastRead = DRAW_MODE_QR;
         }
     }
 
-    return DRAW_MODE_NONE;
+    return lastRead;
 };
