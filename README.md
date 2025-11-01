@@ -1,5 +1,52 @@
 This is a personal project to control a LED matrix from an ESP32 microcontroller.
 
+<table>
+    <tr>
+        <td>
+            <p>Font</p>
+            <img src="https://github.com/user-attachments/assets/127f204d-a744-4bc3-8daa-86bc05b2e7ae" alt="Front" width="300">
+        </td>
+        <td>
+            <p>Back</p>
+            <img src="https://github.com/user-attachments/assets/ad2dc76f-5795-4f9d-8d62-73eaa76a2642" alt="Back" width="300">
+        </td>
+        <td>
+            <p>Inside overview</p>
+            <img src="https://github.com/user-attachments/assets/89290c72-be9d-48ae-81e2-061d67721fd4" alt="Inside overview" width="300">
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <p>GY-521 glued to the inner border of the panel frame</p>
+            <img src="https://github.com/user-attachments/assets/09560be5-7bf0-49b4-9062-4507ca82acf4" alt="GY-521 glued to the inner border of the panel frame" width="300">
+        </td>
+        <td>
+            <p>ESP32 wires</p>
+            <img src="https://github.com/user-attachments/assets/b1536666-e6f3-48b7-b0cc-3fc9d728e89b" alt="ESP32 wires" width="300">
+        </td>
+        <td>
+            <p>Under the LED panel</p>
+            <img src="https://github.com/user-attachments/assets/fc978aba-f130-479f-9e3d-3d351aaf3a8e" alt="Under the LED panel" width="300">
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <p>Image rendering</p>
+            <img src="https://github.com/user-attachments/assets/308a4614-1d05-4956-9a51-0c810895d79b" alt="Image rendering" width="300">
+        </td>
+        <td>
+            <p>GIF rendering</p>
+            <img src="https://github.com/user-attachments/assets/726eb4c8-b945-4988-a89a-f609bb3e5281" alt="GIF rendering" width="300">
+        </td>
+        <td>
+            <p>Rotation</p>
+            <img src="https://github.com/user-attachments/assets/76f52250-7bd9-4076-abf3-0fe4acd02f26" alt="Rotation" width="300">
+        </td>
+    </tr>
+</table>
+
+Some LEDs have been harmed in the development process. Our thoughts go to all the dead pixels out there~
+
 # Components
 
 My LED panel is 19,2x19,2cm, so I'm using a 25x25x3cm frame with a 3D-printed passepartout. I've screwed 4 screws through the frame's backpanel into the LED panel's screw holes, with spacers to keep the panel away from the backpanel and pressed against the glass frame.
@@ -8,7 +55,9 @@ The gyroscope is glued inside with the chip facing upwards (on the inner border 
 
 For powering it I'm using a random USB charger (5V 3A output): I've cut the mini-USB head and wired the esp32 board and LED panel (plus the gyroscope's ground because the esp32's were full). The panel actually uses up to 4-5A (depending on "brand", size and brightness) and the esp32 uses 0.5-1A, so I'm looking for a small power supply that can accomodate that, but it's currently working so ¯\\_(ツ)_/¯
 
-See [gallery](#gallery) for photos.
+Wiring/PIN layout
+
+<img src="https://github.com/user-attachments/assets/639bfff5-33df-4ccd-8ace-b3b7bd0f3105" alt="Wiring/PIN layout" width="800">
 
 ## Hardware
 
@@ -59,63 +108,6 @@ The LED panel has 4 display modes, depending on the frame orientation:
 - upload firmware updates (OTA)
 - application logs (by default the logs are sent only if the web UI is loaded by at least 1 user, use the compile variable `LOG_QUEUE` to enable a queue of up to 50 messages that will be delivered once a user connects)
 - resource usage and system info
-
-# Gallery
-
-Wiring/PIN layout
-
-<img src="https://github.com/user-attachments/assets/639bfff5-33df-4ccd-8ace-b3b7bd0f3105" alt="Wiring/PIN layout" width="800">
-
-Some LEDs have been harmed in the development process. Our thoughts go to all the dead pixels out there~
-
-<table>
-    <tr>
-        <td>
-            <p>Font</p>
-            <img src="https://github.com/user-attachments/assets/127f204d-a744-4bc3-8daa-86bc05b2e7ae" alt="Front" width="300">
-        </td>
-        <td>
-            <p>Back</p>
-            <img src="https://github.com/user-attachments/assets/ad2dc76f-5795-4f9d-8d62-73eaa76a2642" alt="Back" width="300">
-        </td>
-    </tr>
-    <tr>
-        <td>
-            <p>Inside overview</p>
-            <img src="https://github.com/user-attachments/assets/89290c72-be9d-48ae-81e2-061d67721fd4" alt="Inside overview" width="300">
-        </td>
-        <td>
-            <p>GY-521 glued to the inner border of the panel frame</p>
-            <img src="https://github.com/user-attachments/assets/09560be5-7bf0-49b4-9062-4507ca82acf4" alt="GY-521 glued to the inner border of the panel frame" width="300">
-        </td>
-    </tr>
-    <tr>
-        <td>
-            <p>ESP32 wires</p>
-            <img src="https://github.com/user-attachments/assets/b1536666-e6f3-48b7-b0cc-3fc9d728e89b" alt="ESP32 wires" width="300">
-        </td>
-        <td>
-            <p>Under the LED panel</p>
-            <img src="https://github.com/user-attachments/assets/fc978aba-f130-479f-9e3d-3d351aaf3a8e" alt="Under the LED panel" width="300">
-        </td>
-    </tr>
-    <tr>
-        <td>
-            <p>Image rendering</p>
-            <img src="https://github.com/user-attachments/assets/308a4614-1d05-4956-9a51-0c810895d79b" alt="Image rendering" width="300">
-        </td>
-        <td>
-            <p>GIF rendering</p>
-            <img src="https://github.com/user-attachments/assets/726eb4c8-b945-4988-a89a-f609bb3e5281" alt="GIF rendering" width="300">
-        </td>
-    </tr>
-    <tr>
-        <td>
-            <p>Rotation</p>
-            <img src="https://github.com/user-attachments/assets/76f52250-7bd9-4076-abf3-0fe4acd02f26" alt="Rotation" width="300">
-        </td>
-    </tr>
-</table>
 
 # TODOs
 
