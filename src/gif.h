@@ -11,7 +11,6 @@ class GIF {
         AnimatedGIF gif;
         int frameDelay = 0;
         ulong lastGifFrameRender = 0;
-        bool playing = false;
         static void drawLine(GIFDRAW*);
         static void* openFile(const char*, int32_t*);
         static void closeFile(void*);
@@ -21,6 +20,7 @@ class GIF {
     public:
         GIF();
         ~GIF();
+        bool isOpen = false;
         bool open(const char*);
         void renderFrame(MatrixPanel_I2S_DMA*);
         void close();

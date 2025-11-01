@@ -6,6 +6,14 @@ Media::Media(uint8_t w, uint8_t h) {
 };
 
 Media::~Media() {
+    close();
+};
+
+void Media::open() {
+    loadMedia();
+};
+
+void Media::close() {
     gif.close();
     image.close();
 };
@@ -31,6 +39,7 @@ bool Media::processImageChunk(AsyncWebServerRequest *request, uint8_t *data, siz
             return false;
         }
 
+        isUpdating = true;
         gif.close();
         image.close();
         if (!deleteFile(GIF_PATH)) {
@@ -77,6 +86,7 @@ bool Media::processGIFChunk(AsyncWebServerRequest *request, uint8_t *data, size_
             return false;
         }
 
+        isUpdating = true;
         gif.close();
         image.close();
         if (!deleteFile(GIF_PATH)) {
@@ -168,6 +178,7 @@ void Media::initServer(AsyncWebServer *server) {
                 mediaType = MEDIA_TYPE_GIF;
             }
 
+            isUpdating = false;
             request->send(204);
         },
         nullptr,
@@ -190,47 +201,62 @@ void Media::initServer(AsyncWebServer *server) {
     );
 };
 
-void Media::loadMedia() {
+bool Media::loadMedia() {
+    if (image.isOpen || gif.isOpen) {
+        return true;
+    }
+
     if (pathExists(IMAGE_PATH)) {
         if (image.open(IMAGE_PATH)) {
             Log::instance()->info("Loaded image from FLASH\n");
             mediaType = MEDIA_TYPE_IMAGE;
-        } else {
-            Log::instance()->error("Error opening image from FLASH\n");
-            mediaType = MEDIA_TYPE_NONE;
+
+            return true;
         }
 
-        return;
+        Log::instance()->error("Error opening image from FLASH\n");
+        mediaType = MEDIA_TYPE_NONE;
+
+        return false;
     }
+
     if (pathExists(GIF_PATH)) {
         if (gif.open(GIF_PATH)) {
             Log::instance()->info("Loaded GIF from FLASH\n");
             mediaType = MEDIA_TYPE_GIF;
-        } else {
-            Log::instance()->error("Error opening GIF from FLASH\n");
-            mediaType = MEDIA_TYPE_NONE;
+
+            return true;
         }
 
-        return;
+        Log::instance()->error("Error opening GIF from FLASH\n");
+        mediaType = MEDIA_TYPE_NONE;
+
+        return false;
     }
 
     Log::instance()->info("No media stored in FLASH\n");
+    mediaType = MEDIA_TYPE_NONE;
+
+    return false;
 };
 
 void Media::render(MatrixPanel_I2S_DMA *display) {
+    if (isUpdating) {
+        return;
+    }
+
     if (mediaType == MEDIA_TYPE_NONE) {
         display->clearScreen();
 
         return;
     }
-    if (mediaType == MEDIA_TYPE_IMAGE) {
-        // Call to open is here because trying to open in webserver endpoint (right after finished writing) causes a panic and reboot
-        if (!image.open(IMAGE_PATH)) {
-            Log::instance()->error("Error opening image from FLASH\n");
-            mediaType = MEDIA_TYPE_NONE;
 
-            return;
-        }
+    // Call to open is here because trying to open in webserver endpoint (right after finished writing) causes a panic and reboot
+    if (!loadMedia()) {
+        return;
+    }
+
+    if (mediaType == MEDIA_TYPE_IMAGE) {
         // Clear screen only if a new image was uploaded.
         if (drawNewImage) {
             display->clearScreen();
@@ -241,15 +267,8 @@ void Media::render(MatrixPanel_I2S_DMA *display) {
 
         return;
     }
+
     if (mediaType == MEDIA_TYPE_GIF) {
-        // Call to open is here because trying to open in webserver endpoint (right after finished writing) causes a panic and reboot
-        if (!gif.open(GIF_PATH)) {
-            Log::instance()->error("Error opening GIF from FLASH\n");
-            mediaType = MEDIA_TYPE_NONE;
-
-            return;
-        }
-
         gif.renderFrame(display);
 
         return;

@@ -19,6 +19,8 @@ class QRCode : public Renderer {
         virtual void render(MatrixPanel_I2S_DMA*);
         virtual void print();
         virtual bool setText(String);
+        virtual void open();
+        virtual void close();
 };
 
 #endif

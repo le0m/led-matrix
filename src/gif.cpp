@@ -4,30 +4,29 @@
  * Original code taken from https://github.com/mrcodetastic/ESP32-HUB75-MatrixPanel-DMA/blob/fb3499fb66fb4941af8a818eb9be0548fe4b7a60/examples/AnimatedGIFPanel_LittleFS/AnimatedGIFPanel_LittleFS.ino
  */
 
-GIF::GIF() {
-    gif.begin(GIF_PALETTE_RGB565_LE);
-};
+GIF::GIF() {};
 
 GIF::~GIF() {
     gif.close();
 };
 
 bool GIF::open(const char *path) {
-    if (playing) {
+    if (isOpen) {
         return true;
     }
 
-    playing = true;
+    isOpen = true;
+    gif.begin(GIF_PALETTE_RGB565_LE);
 
     return gif.open(path, openFile, closeFile, readFile, seekFile, drawLine);
 };
 
 void GIF::close() {
-    if (!playing) {
+    if (!isOpen) {
         return;
     }
 
-    playing = false;
+    isOpen = false;
     delay(50); // wait for possible renderFrame() execution to finish
     gif.close();
     frameDelay = 0;
@@ -35,7 +34,7 @@ void GIF::close() {
 };
 
 void GIF::renderFrame(MatrixPanel_I2S_DMA  *display) {
-    if (!playing || millis() - lastGifFrameRender < frameDelay) {
+    if (!isOpen || millis() - lastGifFrameRender < frameDelay) {
         return;
     }
 

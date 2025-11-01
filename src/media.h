@@ -23,6 +23,8 @@ class Media : public Renderer {
         GIF gif;
         Image image;
         media_type mediaType = MEDIA_TYPE_NONE;
+        bool isUpdating = false;
+        bool loadMedia();
         bool processImageChunk(AsyncWebServerRequest*, uint8_t*, size_t, size_t, size_t);
         bool processGIFChunk(AsyncWebServerRequest*, uint8_t*, size_t, size_t, size_t);
 
@@ -30,9 +32,10 @@ class Media : public Renderer {
         Media(uint8_t, uint8_t);
         virtual ~Media();
         virtual void initServer(AsyncWebServer*);
-        void loadMedia();
         virtual void render(MatrixPanel_I2S_DMA*);
         virtual void print();
+        virtual void open();
+        virtual void close();
 };
 
 #endif

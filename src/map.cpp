@@ -6,7 +6,15 @@ Map::Map(uint8_t w, uint8_t h) {
 };
 
 Map::~Map() {
-    jpeg.close();
+    close();
+};
+
+void Map::open() {
+    loadMedia();
+};
+
+void Map::close() {
+    closeImage();
 };
 
 void Map::print() {};
@@ -83,7 +91,7 @@ void Map::initServer(AsyncWebServer *server) {
                 return;
             }
 
-            openImage();
+            isUpdating = false;
             forceCropUpdate = true;
             request->send(204);
         },
@@ -111,6 +119,7 @@ void Map::initServer(AsyncWebServer *server) {
                     return;
                 }
 
+                isUpdating = true;
                 closeImage();
                 if (!deleteFile(MAP_PATH)) {
                     Log::instance()->warning("Error deleting previous map\n");
@@ -133,20 +142,26 @@ void Map::initServer(AsyncWebServer *server) {
     );
 };
 
-void Map::loadMedia() {
+bool Map::loadMedia() {
+    if (isOpen) {
+        return true;
+    }
+
     if (!pathExists(MAP_PATH)) {
         Log::instance()->info("No map stored in FLASH\n");
 
-        return;
+        return false;
     }
     if (!openImage()) {
         Log::instance()->error("Error opening map from FLASH\n");
 
-        return;
+        return false;
     }
 
     forceCropUpdate = true;
     Log::instance()->info("Loaded map from FLASH\n");
+
+    return true;
 };
 
 bool Map::setHeaders(HTTPClient &client, const char *headers) {
@@ -345,10 +360,17 @@ void Map::render(MatrixPanel_I2S_DMA *display) {
 
         return;
     }
-    // Re-render at most once a second and avoid running while updating position
+
+    // Re-render at most once a second and avoid running while updating
     if (isUpdating || millis() - lastRender < 1000) {
         return;
     }
+
+    // Call to open is here because trying to open in webserver endpoint (right after finished writing) causes a panic and reboot
+    if (!loadMedia()) {
+        return;
+    }
+
     // Update crop area (and position) once every 15 minutes
     if (forceCropUpdate || millis() - lastCropUpdate > UPDATE_CROP_AREA) {
         isUpdating = true;

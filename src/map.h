@@ -35,6 +35,7 @@ class Map : public Renderer {
         static void asyncUpdateCrop(void*);
         bool openImage();
         void closeImage();
+        bool loadMedia();
         static int draw(JPEGDRAW*);
         static void* openFile(const char*, int32_t*);
         static void closeFile(void*);
@@ -51,9 +52,10 @@ class Map : public Renderer {
         virtual ~Map();
         virtual void initServer(AsyncWebServer*);
         void setConfig(JsonVariantConst);
-        void loadMedia();
         virtual void render(MatrixPanel_I2S_DMA*);
         virtual void print();
+        virtual void open();
+        virtual void close();
 };
 
 #endif

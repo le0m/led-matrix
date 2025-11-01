@@ -22,6 +22,7 @@ class Life : public Renderer {
         ulong lastRender = 0;
         CHSV hsv = CHSV(0, 255, 255);
         CRGB rgb = CRGB(0, 0, 0);
+        bool isOpen = false;
 
         virtual void populate();
         virtual uint8_t neighbors(uint8_t, uint8_t);
@@ -33,6 +34,8 @@ class Life : public Renderer {
         virtual void initServer(AsyncWebServer*);
         virtual void render(MatrixPanel_I2S_DMA*);
         virtual void print();
+        virtual void open();
+        virtual void close();
 };
 
 #endif

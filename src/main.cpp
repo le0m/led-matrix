@@ -35,17 +35,41 @@ void updateQrText() {
     }
 };
 
-void changeMode(draw_mode newMode) {
+bool changeMode(draw_mode newMode) {
     if (newMode == drawMode) {
-        return;
+        return false;
     }
 
+    life.close();
+    qr.close();
+    media.close();
+    mapp.close();
+    switch (newMode) {
+        case DRAW_MODE_LIFE:
+            life.open();
+            break;
+        case DRAW_MODE_QR:
+            qr.open();
+            break;
+        case DRAW_MODE_IMAGE:
+            media.open();
+            break;
+        case DRAW_MODE_MAP:
+            mapp.open();
+            break;
+
+        default:
+            break;
+    }
     drawMode = newMode;
     Log::instance()->info("Changed mode to %d\n", drawMode);
     display->clearScreen();
+
     if (newMode == DRAW_MODE_QR) {
         updateQrText();
     }
+
+    return true;
 };
 
 void updateConfig(JsonDocument newConfig) {
@@ -107,9 +131,7 @@ void setup() {
 
     // Initialize modules
     media.initServer(&server);
-    media.loadMedia();
     mapp.initServer(&server);
-    mapp.loadMedia();
     mapp.setConfig(conf.current["map"].as<JsonVariantConst>());
     life.setFPS(FPS);
     conf.initServer(&server);
@@ -153,8 +175,11 @@ void loop() {
 
     if (lastModePoll + 1000 < millis()) {
         lastModePoll = millis();
-        changeMode(selector.getMode());
+        if (changeMode(selector.getMode())) {
+            return;
+        }
     }
+
     switch (drawMode) {
         case DRAW_MODE_LIFE:
             life.render(display);

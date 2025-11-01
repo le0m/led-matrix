@@ -10,7 +10,6 @@ class Image {
     private:
         JPEGDEC jpeg;
         ulong lastRender = 0;
-        bool isOpen = false;
         const char* filePath;
         static int draw(JPEGDRAW*);
         static void* openFile(const char*, int32_t*);
@@ -19,6 +18,7 @@ class Image {
         static int32_t seekFile(JPEGFILE*, int32_t);
 
     public:
+        bool isOpen = false;
         Image();
         ~Image();
         bool open(const char*);
