@@ -169,9 +169,9 @@ bool Map::setHeaders(HTTPClient &client, const char *headers) {
     }
 
     for (JsonPairConst kvp : h.as<JsonObjectConst>()) {
-        String key(kvp.key().c_str());
+        const char* key = kvp.key().c_str();
         std::string value = kvp.value().as<std::string>();
-        if (key.equalsIgnoreCase("Authorization")) {
+        if (strcasecmp(key, "Authorization") == 0) {
             size_t i = value.find(' ');
             if (i == std::string::npos) {
                 Log::instance()->error("Missing header authorization type or value\n");
@@ -183,29 +183,29 @@ bool Map::setHeaders(HTTPClient &client, const char *headers) {
             client.setAuthorization(value.substr(i + 1).c_str());
             continue;
         }
-        if (key.equalsIgnoreCase("User-Agent")) {
+        if (strcasecmp(key, "User-Agent") == 0) {
             client.setUserAgent(value.c_str());
             continue;
         }
-        if (key.equalsIgnoreCase("Connection")) {
+        if (strcasecmp(key, "Connection") == 0) {
             client.setReuse(strcmp(value.c_str(), "close") != 0);
             continue;
         }
-        if (key.equalsIgnoreCase("Host")) {
+        if (strcasecmp(key, "Host") == 0) {
             continue;
         }
 
-        client.addHeader(key.c_str(), value.c_str());
+        client.addHeader(key, value.c_str());
     }
 
     return true;
 };
 
-std::array<double, 2> Map::matchRegex(String res, const char *r) {
+std::array<double, 2> Map::matchRegex(const char* res, const char *r) {
     std::array<double, 2> pos = { 0, 0 };
     std::regex regex(r);
     std::smatch matches;
-    std::string str = std::string(res.c_str());
+    std::string str = std::string(res);
     if (!std::regex_search(str, matches, regex)) {
         Log::instance()->error("Regex %s did not match position API response:\n%s\n\n", r, str.c_str());
 
@@ -230,50 +230,52 @@ std::array<double, 2> Map::getPositionFromAPI() {
     http.setReuse(false);
     http.setConnectTimeout(10000);
     http.setTimeout(60000);
-    String u = config["url"].as<String>();
-    String m = config["method"].as<String>();
+    const char *u = config["url"].as<const char*>();
+    const char *m = config["method"].as<const char*>();
     const char *r = config["regex"].as<const char*>();
-    if (u.isEmpty()) {
+    const char *b = config["body"].as<const char*>();
+
+    if (u == nullptr || strcmp(u, "") == 0) {
         Log::instance()->error("Position API URL is not set\n");
 
         return pos;
     }
-    if (strcmp(r, "") == 0) {
+    if (r == nullptr || strcmp(r, "") == 0) {
         Log::instance()->error("Position API regexp is not set\n");
 
         return pos;
     }
-    if (m.isEmpty()) {
+    if (m == nullptr || strcmp(m, "") == 0) {
         m = "GET";
     }
 
-    // Apply query params
-    String b = config["body"].as<String>();
-    if (m.equalsIgnoreCase("GET") && !b.isEmpty()) {
+    // Apply query params for GET requests
+    if (strcasecmp(m, "GET") == 0 && b != nullptr && strcmp(b, "") != 0) {
+        char urlBuffer[128];
+
         // Need a "/" after hostname, otherwise the query parameters end up in the DNS query
-        if (!u.endsWith("/") && !u.concat("/")) {
-            Log::instance()->error("Error adding query parameters\n");
-
-            return pos;
+        size_t urlLen = strlen(u);
+        if (u[urlLen - 1] == '/') {
+            snprintf(urlBuffer, sizeof(urlBuffer), "%s%s", u, b);
+        } else {
+            snprintf(urlBuffer, sizeof(urlBuffer), "%s/%s", u, b);
         }
-        if (!u.concat(b)) {
-            Log::instance()->error("Error adding query parameters\n");
 
-            return pos;
-        }
+        u = urlBuffer;
     }
 
     http.begin(client, u);
+
     // Apply headers
     const char *hs = config["headers"].as<const char*>();
-    if (strcmp(hs, "") != 0 && !setHeaders(http, hs)) {
+    if (hs != nullptr && strcmp(hs, "") != 0 && !setHeaders(http, hs)) {
         return pos;
     }
 
     // Send request
     int code;
-    if (m.equalsIgnoreCase("POST")) {
-        code = http.POST(b);
+    if (strcasecmp(m, "POST") == 0) {
+        code = http.POST((b != nullptr && strcmp(b, "") != 0) ? b : "");
     } else {
         code = http.GET();
     }
@@ -284,8 +286,7 @@ std::array<double, 2> Map::getPositionFromAPI() {
     }
 
     // Match regex
-    String res = http.getString();
-    pos = matchRegex(res, r);
+    pos = matchRegex(http.getString().c_str(), r);
 
     return pos;
 };

@@ -3,6 +3,7 @@
 QRCode::QRCode(uint8_t w, uint8_t h) {
     width = w;
     height = h;
+    text[0] = '\0';
 };
 
 QRCode::~QRCode() {};
@@ -15,10 +16,16 @@ bool QRCode::close() {
     return true;
 };
 
-bool QRCode::setText(String str) {
+bool QRCode::setText(const char* str) {
+    if (strlen(str) >= QR_TEXT_MAX_LENGTH) {
+        Log::instance()->error("QR text too long: %d instead of %d\n", strlen(str), QR_TEXT_MAX_LENGTH);
+
+        return false;
+    }
+
     uint8_t tempBuffer[qrcodegen_BUFFER_LEN_FOR_VERSION(2)];
     if (!qrcodegen_encodeText(
-        str.c_str(),
+        str,
         tempBuffer,
         qr0,
         qrcodegen_Ecc_QUARTILE,
@@ -30,7 +37,8 @@ bool QRCode::setText(String str) {
         return false;
     }
 
-    text = str;
+    strncpy(text, str, QR_TEXT_MAX_LENGTH - 1);
+    text[QR_TEXT_MAX_LENGTH - 1] = '\0';
     changed = true;
 
     return true;

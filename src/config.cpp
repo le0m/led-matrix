@@ -61,7 +61,7 @@ void Config::initServer(AsyncWebServer *server) {
         request->send(response);
     });
     AsyncCallbackJsonWebHandler* handler = new AsyncCallbackJsonWebHandler("/config", [&](AsyncWebServerRequest *request, JsonVariant &json) {
-        if (request->methodToString() != "POST") {
+        if (strcasecmp(request->methodToString(), "POST") != 0) {
             request->send(405);
 
             return;

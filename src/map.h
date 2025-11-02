@@ -40,7 +40,7 @@ class Map : public Renderer {
         static int32_t readFile(JPEGFILE*, uint8_t*, int32_t);
         static int32_t seekFile(JPEGFILE*, int32_t);
         bool setHeaders(HTTPClient&, const char*);
-        std::array<double, 2> matchRegex(String, const char*);
+        std::array<double, 2> matchRegex(const char*, const char*);
         std::array<double, 2> getPositionFromAPI();
         std::array<double, 2> getPosition();
         void updateCrop();

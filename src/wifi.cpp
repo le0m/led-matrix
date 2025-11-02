@@ -1,14 +1,16 @@
 #include "wifi.h"
 
-WiFiController::WiFiController() {};
+WiFiController::WiFiController() {
+    urlBuffer[0] = '\0';
+};
 
 WiFiController::~WiFiController() {};
 
-bool WiFiController::connect(String ssid, String password) {
+bool WiFiController::connect(const char* ssid, const char* password) {
     if (!disconnect()) {
         return false;
     }
-    if (ssid == "" || password == "") {
+    if (ssid[0] == '\0' || password[0] == '\0') {
         Log::instance()->info("Starting WiFi in AP mode\n");
 
         if (!WiFi.softAP(SETUP_AP_SSID, SETUP_AP_PASS)) {
@@ -30,7 +32,7 @@ bool WiFiController::connect(String ssid, String password) {
     }
 
     WiFi.setAutoReconnect(true);
-    WiFi.begin(ssid.c_str(), password.c_str());
+    WiFi.begin(ssid, password);
     Log::instance()->info("Connecting to WiFi\n");
     wl_status_t s;
     uint8_t t = 0;
@@ -71,35 +73,37 @@ bool WiFiController::disconnect() {
     return true;
 };
 
-String WiFiController::getIp() {
+const char* WiFiController::getIp() {
     if (WiFi.getMode() & WIFI_MODE_AP) {
-        return WiFi.softAPIP().toString();
+        return WiFi.softAPIP().toString().c_str();
     }
     if (WiFi.getMode() & WIFI_MODE_STA) {
         if (WiFi.status() != WL_CONNECTED) {
-            return String("");
+            return "";
         }
 
-        return WiFi.localIP().toString();
+        return WiFi.localIP().toString().c_str();
     }
 
     Log::instance()->warning("No IP availble because not connected to a nerwork\n");
 
-    return String("");
+    return "";
 };
 
 wifi_mode_t WiFiController::getMode() {
     return WiFi.getMode();
 };
 
-String WiFiController::getUrl() {
-    String ip = getIp();
-    if (ip == "") {
-        return ip;
+const char* WiFiController::getUrl() {
+    const char* ip = getIp();
+
+    if (ip[0] == '\0') {
+        urlBuffer[0] = '\0';
+
+        return urlBuffer;
     }
 
-    String url = "http://";
-    url.concat(ip);
+    snprintf(urlBuffer, MAX_URL_LENGTH, "http://%s/", ip);
 
-    return url;
+    return urlBuffer;
 };

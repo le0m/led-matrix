@@ -5,11 +5,12 @@
 #include "renderer.h"
 #include "qrcodegen.h"
 #define QR_BORDER_PX 4
+#define QR_TEXT_MAX_LENGTH 32
 
 class QRCode : public Renderer {
     private:
         uint8_t qr0[qrcodegen_BUFFER_LEN_FOR_VERSION(2)];
-        String text;
+        char text[QR_TEXT_MAX_LENGTH];
         bool changed = true;
 
     public:
@@ -18,7 +19,7 @@ class QRCode : public Renderer {
         virtual void initServer(AsyncWebServer*);
         virtual void render(MatrixPanel_I2S_DMA*);
         virtual void print();
-        virtual bool setText(String);
+        virtual bool setText(const char*);
         virtual bool open();
         virtual bool close();
 };

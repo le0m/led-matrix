@@ -29,9 +29,9 @@ Config conf(updateConfig);
 Renderer *currentMode = nullptr;
 
 void updateQrText() {
-    String url = wifi.getUrl();
-    Log::instance()->info("QR code URL: %s\n", url.c_str());
-    if (url != "" && !qr.setText(url)) {
+    const char* url = wifi.getUrl();
+    Log::instance()->info("QR code URL: %s\n", url);
+    if (url[0] != '\0' && !qr.setText(url)) {
         Log::instance()->error("Error encoding IP to QR code\n");
     }
 };
@@ -80,9 +80,14 @@ bool changeMode(draw_mode newMode) {
 };
 
 void updateConfig(JsonDocument newConfig) {
-    if (newConfig["wifi"]["ssid"].as<String>() != conf.current["wifi"]["ssid"].as<String>() || newConfig["wifi"]["password"].as<String>() != conf.current["wifi"]["password"].as<String>()) {
+    const char* newSsid = newConfig["wifi"]["ssid"].as<const char*>();
+    const char* newPassword = newConfig["wifi"]["password"].as<const char*>();
+    const char* currentSsid = conf.current["wifi"]["ssid"].as<const char*>();
+    const char* currentPassword = conf.current["wifi"]["password"].as<const char*>();
+
+    if (strcmp(newSsid, currentSsid) != 0 || strcmp(newPassword, currentPassword) != 0) {
         Log::instance()->info("WiFi configuration changed, reconnecting\n");
-        wifi.connect(newConfig["wifi"]["ssid"].as<String>(), newConfig["wifi"]["password"].as<String>());
+        wifi.connect(newSsid, newPassword);
     }
     if (newConfig["panel"]["brightness"].as<uint8_t>() != conf.current["panel"]["brightness"].as<uint8_t>()) {
         Log::instance()->info("Panel brightness changed: %d\n", newConfig["panel"]["brightness"].as<uint8_t>());
@@ -125,7 +130,7 @@ void setup() {
     }
 
     // Initialize WiFi
-    if (!wifi.connect(conf.current["wifi"]["ssid"].as<String>(), conf.current["wifi"]["password"].as<String>())) {
+    if (!wifi.connect(conf.current["wifi"]["ssid"].as<const char*>(), conf.current["wifi"]["password"].as<const char*>())) {
         return;
     }
     updateQrText();

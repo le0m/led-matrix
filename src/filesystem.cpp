@@ -3,8 +3,10 @@
 // see readme "Note on PlatformIO"
 bool pathExists(const char *path) {
     static struct stat pathStat;
+    char fullPath[64];
+    snprintf(fullPath, sizeof(fullPath), "/littlefs%s", path);
 
-    return stat((String("/littlefs")+String(path)).c_str(), &pathStat) == 0;
+    return stat(fullPath, &pathStat) == 0;
 };
 
 bool deleteFile(const char *path) {
