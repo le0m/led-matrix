@@ -5,7 +5,8 @@
 #include "renderer.h"
 #include "qrcodegen.h"
 #define QR_BORDER_PX 4
-#define QR_TEXT_MAX_LENGTH 32
+#define QR_VERSION 2
+#define QR_TEXT_MAX_LENGTH QR_VERSION * 4 + 17
 
 class QRCode : public Renderer {
     private:

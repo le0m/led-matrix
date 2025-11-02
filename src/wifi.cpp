@@ -2,6 +2,7 @@
 
 WiFiController::WiFiController() {
     urlBuffer[0] = '\0';
+    ipBuffer[0] = '\0';
 };
 
 WiFiController::~WiFiController() {};
@@ -24,7 +25,7 @@ bool WiFiController::connect(const char* ssid, const char* password) {
         return true;
     }
 
-    Log::instance()->info("Stating WiFi in STA mode\n");
+    Log::instance()->info("Starting WiFi in STA mode\n");
     if (!WiFi.mode(WIFI_STA)) {
         Log::instance()->error("Error setting STA mode\n");
 
@@ -74,20 +75,25 @@ bool WiFiController::disconnect() {
 };
 
 const char* WiFiController::getIp() {
+    ipBuffer[0] = '\0';
+
     if (WiFi.getMode() & WIFI_MODE_AP) {
-        return WiFi.softAPIP().toString().c_str();
-    }
-    if (WiFi.getMode() & WIFI_MODE_STA) {
+        strncpy(ipBuffer, WiFi.softAPIP().toString().c_str(), MAX_IP_LENGTH);
+    } else if (WiFi.getMode() & WIFI_MODE_STA) {
         if (WiFi.status() != WL_CONNECTED) {
-            return "";
+            Log::instance()->debug("Unable to get IP, WiFi not connected\n");
+
+            return ipBuffer;
         }
 
-        return WiFi.localIP().toString().c_str();
+        strncpy(ipBuffer, WiFi.localIP().toString().c_str(), MAX_IP_LENGTH);
+    } else {
+        Log::instance()->warning("No IP availble because not connected to a nerwork\n");
     }
 
-    Log::instance()->warning("No IP availble because not connected to a nerwork\n");
+    ipBuffer[MAX_IP_LENGTH - 1] = '\0';
 
-    return "";
+    return ipBuffer;
 };
 
 wifi_mode_t WiFiController::getMode() {

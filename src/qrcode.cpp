@@ -23,14 +23,14 @@ bool QRCode::setText(const char* str) {
         return false;
     }
 
-    uint8_t tempBuffer[qrcodegen_BUFFER_LEN_FOR_VERSION(2)];
+    uint8_t tempBuffer[qrcodegen_BUFFER_LEN_FOR_VERSION(QR_VERSION)];
     if (!qrcodegen_encodeText(
         str,
         tempBuffer,
         qr0,
         qrcodegen_Ecc_QUARTILE,
         qrcodegen_VERSION_MIN,
-        2,
+        QR_VERSION,
         qrcodegen_Mask_AUTO,
         true
     )) {
