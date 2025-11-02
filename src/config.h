@@ -7,7 +7,7 @@
 #include <ESPAsyncWebServer.h>
 #include <AsyncJson.h>
 
-typedef std::function<void(JsonDocument cfg)> ConfigChangeHandler;
+typedef std::function<void(JsonDocument& cfg)> ConfigChangeHandler;
 
 class Config {
     private:

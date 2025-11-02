@@ -13,7 +13,7 @@ bool pathExists(const char*);
 bool writeBytes(const char*, uint8_t*, size_t);
 bool readBytes(const char*, uint8_t*, size_t);
 bool deleteFile(const char*);
-bool writeConfig(const char*, JsonDocument);
+bool writeConfig(const char*, JsonDocument&);
 JsonDocument readConfig(const char*);
 
 #endif

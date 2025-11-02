@@ -42,6 +42,6 @@
 // Config
 #define FPS 15
 
-void updateConfig(JsonDocument);
+void updateConfig(JsonDocument& newConfig);
 
 #endif

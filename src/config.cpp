@@ -22,7 +22,8 @@ bool Config::load(const char *path) {
 void Config::asyncUpdateConfig(void *p) {
     Config *t = (Config*) p;
     // Merge new config with current for partial updates
-    JsonDocument merged = t->current;
+    JsonDocument merged;
+    merged.set(t->current);
     Config::merge(merged.as<JsonVariant>(), t->newCfg.as<JsonVariantConst>());
     if (t->configChangeHandler) {
         t->configChangeHandler(merged);
@@ -30,8 +31,7 @@ void Config::asyncUpdateConfig(void *p) {
 
     t->newCfg.clear();
     t->current.clear();
-    t->current = merged;
-    t->current.shrinkToFit();
+    t->current.set(merged);
     t->save();
     vTaskDelete(NULL);
 };

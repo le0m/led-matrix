@@ -79,7 +79,7 @@ bool changeMode(draw_mode newMode) {
     return true;
 };
 
-void updateConfig(JsonDocument newConfig) {
+void updateConfig(JsonDocument& newConfig) {
     const char* newSsid = newConfig["wifi"]["ssid"].as<const char*>();
     const char* newPassword = newConfig["wifi"]["password"].as<const char*>();
     const char* currentSsid = conf.current["wifi"]["ssid"].as<const char*>();

@@ -20,7 +20,7 @@ bool deleteFile(const char *path) {
 bool writeBytes(const char *path, uint8_t *buf, size_t size) {
     File file = LittleFS.open(path, FILE_APPEND);
     if (!file) {
-        Log::instance()->error("Error opening file: %s\n", path);
+        Log::instance()->error("Error opening file for write: %s\n", path);
 
         return false;
     }
@@ -46,7 +46,7 @@ bool readBytes(const char *path, uint8_t *buf, size_t size) {
 
     File file = LittleFS.open(path);
     if (!file) {
-        Log::instance()->error("Error opening file: %s\n", path);
+        Log::instance()->error("Error opening file for read: %s\n", path);
 
         return false;
     }
@@ -65,10 +65,10 @@ bool readBytes(const char *path, uint8_t *buf, size_t size) {
     return true;
 };
 
-bool writeConfig(const char *path, JsonDocument cfg) {
+bool writeConfig(const char *path, JsonDocument& cfg) {
     File file = LittleFS.open(path, FILE_WRITE);
     if (!file) {
-        Log::instance()->error("Error opening file: %s\n", path);
+        Log::instance()->error("Error opening config for write: %s\n", path);
 
         return false;
     }
@@ -95,7 +95,7 @@ JsonDocument readConfig(const char *path) {
 
     File file = LittleFS.open(path);
     if (!file) {
-        Log::instance()->error("Error opening file: %s\n", path);
+        Log::instance()->error("Error opening config for read: %s\n", path);
 
         return cfg;
     }
