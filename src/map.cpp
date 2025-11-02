@@ -37,13 +37,6 @@ void Map::setConfig(JsonVariantConst c) {
 
 void Map::initServer(AsyncWebServer *server) {
     server->on("/map", HTTP_GET, [&](AsyncWebServerRequest *request) {
-        const AsyncWebHeader *accept = request->getHeader("Accept");
-        if (accept->value() != "image/jpeg") {
-            Log::instance()->error("Map request has unhandled accept: %s\n", accept->value());
-            request->send(400, "text/plain", "unhandled accept type");
-
-            return;
-        }
         if (!pathExists(MAP_PATH)) {
             Log::instance()->info("No map currently stored\n");
             request->send(204);

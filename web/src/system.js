@@ -1,4 +1,4 @@
-import { handleFetch, humanFileSize } from "./utils";
+import { humanFileSize, setProgress } from './utils';
 
 /**
  * @typedef SystemStatus
@@ -20,45 +20,40 @@ const fsInfo = document.getElementById('fs-info');
 const fwInfo = document.getElementById('fw-info');
 const refreshButton = document.getElementById('refresh-resources');
 
-const setProgress = (elem, progress) => {
-    elem.value = progress;
-    ['success', 'warning', 'error', 'pattern'].forEach((c) => elem.classList.remove(`is-${c}`));
-    if (progress <= 50) {
-        elem.classList.add('is-success');
-    } else if (progress <= 75) {
-        elem.classList.add('is-warning');
-    } else {
-        elem.classList.add('is-error');
-    }
+/**
+ * Update current status.
+ *
+ * @param {import('./state.js').State} state
+ */
+const updateStatus = async (state) => {
+	const status = await state.status(true);
+	if (!status) {
+		return;
+	}
+
+	// Update hardware/software info
+	hwMsg.innerText = `Running on a ${status.chip.model} (rev. ${status.chip.revision}) with ${status.chip.cores} CPU clocking at ${status.chip.clock} MHz`;
+	swMsg.innerText = `Firmware version ${status.firmware.version}, SDK version ${status.sdk}`;
+
+	// Update resources usage
+	const heapPerc = (100 * (status.heap.size - status.heap.free)) / status.heap.size;
+	const fsPerc = (100 * status.filesystem.used) / status.filesystem.size;
+	const fwPerc = (100 * status.firmware.used) / status.firmware.size;
+	setProgress(heap, heapPerc);
+	setProgress(fs, fsPerc);
+	setProgress(fw, fwPerc);
+	heapInfo.innerText = `(${humanFileSize(status.heap.size - status.heap.free)} / ${humanFileSize(status.heap.size)})`;
+	fsInfo.innerText = `(${humanFileSize(status.filesystem.used)} / ${humanFileSize(status.filesystem.size)})`;
+	fwInfo.innerText = `(${humanFileSize(status.firmware.used)} / ${humanFileSize(status.firmware.size)})`;
 };
 
-const updateStatus = async (baseUrl) => {
-    const res = await handleFetch(new URL('status', baseUrl));
-    if (!res) {
-        return;
-    }
+/**
+ * Initialize system module.
+ *
+ * @param {import('./state.js').State} state
+ */
+export const system = (state) => {
+	updateStatus(state);
 
-    /** @type {SystemStatus} */
-    const status = await res.json();
-
-    // Update hardware/software info
-    hwMsg.innerText = `Running on a ${status.chip.model} (rev. ${status.chip.revision}) with ${status.chip.cores} CPU clocking at ${status.chip.clock} MHz`;
-    swMsg.innerText = `Firmware version ${status.firmware.version}, SDK version ${status.sdk}`;
-
-    // Update resources usage
-    const heapPerc = 100 * (status.heap.size - status.heap.free) / status.heap.size;
-    const fsPerc = 100 * status.filesystem.used / status.filesystem.size;
-    const fwPerc = 100 * status.firmware.used / status.firmware.size;
-    setProgress(heap, heapPerc);
-    setProgress(fs, fsPerc);
-    setProgress(fw, fwPerc);
-    heapInfo.innerText = `(${humanFileSize(status.heap.size - status.heap.free)} / ${humanFileSize(status.heap.size)})`;
-    fsInfo.innerText = `(${humanFileSize(status.filesystem.used)} / ${humanFileSize(status.filesystem.size)})`;
-    fwInfo.innerText = `(${humanFileSize(status.firmware.used)} / ${humanFileSize(status.firmware.size)})`;
-};
-
-export const system = (baseUrl) => {
-    updateStatus(baseUrl);
-
-    refreshButton.addEventListener('click', () => updateStatus(baseUrl));
+	refreshButton.addEventListener('click', () => updateStatus(state));
 };

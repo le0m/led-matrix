@@ -120,24 +120,22 @@ bool Media::processGIFChunk(AsyncWebServerRequest *request, uint8_t *data, size_
 
 void Media::initServer(AsyncWebServer *server) {
     server->on("/drawer", HTTP_GET, [&](AsyncWebServerRequest *request) {
-        if (mediaType == MEDIA_TYPE_NONE) {
-            Log::instance()->info("No media currently stored\n");
-            request->send(204);
-
-            return;
-        }
-        if (mediaType == MEDIA_TYPE_IMAGE && pathExists(IMAGE_PATH)) {
+        if (pathExists(IMAGE_PATH)) {
             Log::instance()->info("Sending current image\n");
             request->send(LittleFS, IMAGE_PATH, "image/jpeg");
 
             return;
         }
-        if (mediaType == MEDIA_TYPE_GIF && pathExists(GIF_PATH)) {
+
+        if (pathExists(GIF_PATH)) {
             Log::instance()->info("Sending current GIF\n");
             request->send(LittleFS, GIF_PATH, "image/gif");
 
             return;
         }
+
+        Log::instance()->info("No media currently stored\n");
+        request->send(204);
     });
     server->on("/drawer", HTTP_DELETE, [&](AsyncWebServerRequest *request) {
         mediaType = MEDIA_TYPE_NONE;

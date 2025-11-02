@@ -1,103 +1,112 @@
 @import 'nes.css/css/nes.min.css';
 
 @font-face {
-    font-family: "Press Start 2P";
-    src: url(/PressStart2P-Regular.ttf) format("truetype");
+	font-family: 'Press Start 2P';
+	src: url(/PressStart2P-Regular.ttf) format('truetype');
 }
 
 html * {
-    font-family: "Press Start 2P", system-ui;
-    font-weight: 400;
-    font-style: normal;
+	font-family: 'Press Start 2P', system-ui;
+	font-weight: 400;
+	font-style: normal;
 }
 
 .container {
-    display: flex;
-    flex-direction: column;
-    gap: 5vh;
-    padding: 5vh 3vw;
+	display: flex;
+	flex-direction: column;
+	gap: 5vh;
+	padding: 5vh 3vw;
 }
 
 section.nes-container.with-title > div > * {
-    margin-bottom: 1.5rem;
+	margin-bottom: 1.5rem;
 }
 
 section.nes-container.with-title > div > button {
-    max-width: fit-content;
+	max-width: fit-content;
 }
 
 .logs textarea {
-    height: 200px;
-    max-height: 500px;
-    overflow: scroll;
+	height: 200px;
+	max-height: 500px;
+	overflow: scroll;
 }
 
 .is-hidden {
-    display: none;
+	display: none;
 }
 
 .row-field {
-    display: flex;
-    gap: 1vw;
+	display: flex;
+	gap: 1vw;
 }
 
 canvas {
-    border: 2px solid #000;
+	border: 2px solid #000;
 }
 
 /* enlarge preview with CSS, actual size remains unchanged */
 canvas#drawer-preview,
 img#gif-preview,
 canvas#panel-preview {
-    width: 256px;
-    height: 256px;
+	width: 256px;
+	height: 256px;
 }
 
 canvas#map-preview {
-    max-width: 80vw;
+	max-width: 80vw;
+}
+
+progress#submit-file-progress,
+progress#submit-map-progress,
+progress#submit-update-progress {
+	max-width: 50%;
 }
 
 /* taken from NES.CSS examples */
 .message-list > .message.-left {
-  align-self: flex-start;
+	align-self: flex-start;
 }
 .message-list > .message.-right {
-  align-self: flex-end;
+	align-self: flex-end;
 }
 .message-list > .message {
-  display: flex;
-  margin-top: 2rem;
+	display: flex;
+	margin-top: 2rem;
 }
 .message-list > .message.-left i {
-  margin-right: 2rem;
+	margin-right: 2rem;
 }
 .message-list > .message.-right i {
-  margin-left: 2rem;
+	margin-left: 2rem;
 }
 .message-list > .message i {
-  align-self: flex-end;
+	align-self: flex-end;
 }
 
 /* taken from NES.CSS code */
 .pointer {
-    cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAzElEQVRYR+2X0Q6AIAhF5f8/2jYXZkwEjNSVvVUjDpcrGgT7FUkI2D9xRfQETwNIiWO85wfINfQUEyxBG2ArsLwC0jioGt5zFcwF4OYDPi/mBYKm4t0U8ATgRm3ThFoAqkhNgWkA0jJLvaOVSs7j3qMnSgXWBMiWPXe94QqMBMBc1VZIvaTu5u5pQewq0EqNZvIEMCmxAawK0DNkay9QmfFNAJUXfgGgUkLaE7j/h8fnASkxHTz0DGIBMCnBeeM7AArpUd3mz2x3C7wADglA8BcWMZhZAAAAAElFTkSuQmCC) 14 0,pointer;
+	cursor:
+		url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAzElEQVRYR+2X0Q6AIAhF5f8/2jYXZkwEjNSVvVUjDpcrGgT7FUkI2D9xRfQETwNIiWO85wfINfQUEyxBG2ArsLwC0jioGt5zFcwF4OYDPi/mBYKm4t0U8ATgRm3ThFoAqkhNgWkA0jJLvaOVSs7j3qMnSgXWBMiWPXe94QqMBMBc1VZIvaTu5u5pQewq0EqNZvIEMCmxAawK0DNkay9QmfFNAJUXfgGgUkLaE7j/h8fnASkxHTz0DGIBMCnBeeM7AArpUd3mz2x3C7wADglA8BcWMZhZAAAAAElFTkSuQmCC)
+			14 0,
+		pointer;
 }
 
 @media screen and (width < 768px) {
-    html,
-    body {
-        font-size: 12px;
-    }
+	html,
+	body {
+		font-size: 12px;
+	}
 
-    .container {
-        gap: 3vh;
-    }
+	.container {
+		gap: 3vh;
+	}
 
-    /* enlarge preview with CSS, actual size remains unchanged */
-    canvas#drawer-preview,
-    img#gif-preview,
-    canvas#panel-preview {
-        width: 512px;
-        height: 512px;
-    }
+	/* enlarge preview with CSS, actual size remains unchanged */
+	canvas#drawer-preview,
+	img#gif-preview,
+	canvas#panel-preview {
+		width: 512px;
+		height: 512px;
+	}
 }
