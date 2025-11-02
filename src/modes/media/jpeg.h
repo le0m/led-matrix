@@ -10,7 +10,6 @@ class JPEG {
     private:
         JPEGDEC jpeg;
         ulong lastRender = 0;
-        const char* filePath;
         static int draw(JPEGDRAW*);
         static void* openFile(const char*, int32_t*);
         static void closeFile(void*);

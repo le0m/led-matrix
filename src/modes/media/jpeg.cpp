@@ -11,11 +11,10 @@ bool JPEG::open(const char *path) {
         return true;
     }
 
-    filePath = path;
     lastRender = 0;
     isOpen = true;
 
-    return jpeg.open(filePath, openFile, closeFile, readFile, seekFile, draw);
+    return jpeg.open(path, openFile, closeFile, readFile, seekFile, draw);
 };
 
 void JPEG::close() {
