@@ -1,12 +1,12 @@
-#include "image.h"
+#include "jpeg.h"
 
-Image::Image() {};
+JPEG::JPEG() {};
 
-Image::~Image() {
+JPEG::~JPEG() {
     jpeg.close();
 };
 
-bool Image::open(const char *path) {
+bool JPEG::open(const char *path) {
     if (isOpen) {
         return true;
     }
@@ -18,7 +18,7 @@ bool Image::open(const char *path) {
     return jpeg.open(filePath, openFile, closeFile, readFile, seekFile, draw);
 };
 
-void Image::close() {
+void JPEG::close() {
     if (!isOpen) {
         return;
     }
@@ -29,7 +29,7 @@ void Image::close() {
     lastRender = 0;
 };
 
-void Image::renderFrame(MatrixPanel_I2S_DMA  *display) {
+void JPEG::renderFrame(MatrixPanel_I2S_DMA  *display) {
     // Render once
     if (!isOpen || lastRender > 0) {
         return;
@@ -42,7 +42,7 @@ void Image::renderFrame(MatrixPanel_I2S_DMA  *display) {
     }
 };
 
-void* Image::openFile(const char *path, int32_t *size) {
+void* JPEG::openFile(const char *path, int32_t *size) {
     File *file = new File();
     *file = LittleFS.open(path);
     if (file) {
@@ -56,7 +56,7 @@ void* Image::openFile(const char *path, int32_t *size) {
     return NULL;
 };
 
-void Image::closeFile(void *pHandle) {
+void JPEG::closeFile(void *pHandle) {
     File *f = static_cast<File *>(pHandle);
     if (f != NULL) {
         f->close();
@@ -64,7 +64,7 @@ void Image::closeFile(void *pHandle) {
     }
 };
 
-int32_t Image::readFile(JPEGFILE *pFile, uint8_t *pBuf, int32_t iLen) {
+int32_t JPEG::readFile(JPEGFILE *pFile, uint8_t *pBuf, int32_t iLen) {
     int32_t iBytesRead;
     iBytesRead = iLen;
     File *f = static_cast<File *>(pFile->fHandle);
@@ -82,7 +82,7 @@ int32_t Image::readFile(JPEGFILE *pFile, uint8_t *pBuf, int32_t iLen) {
     return iBytesRead;
 };
 
-int32_t Image::seekFile(JPEGFILE *pFile, int32_t iPosition) {
+int32_t JPEG::seekFile(JPEGFILE *pFile, int32_t iPosition) {
     File *f = static_cast<File *>(pFile->fHandle);
     f->seek(iPosition);
     pFile->iPos = (int32_t)f->position();
@@ -90,7 +90,7 @@ int32_t Image::seekFile(JPEGFILE *pFile, int32_t iPosition) {
     return pFile->iPos;
 };
 
-int Image::draw(JPEGDRAW *pDraw) {
+int JPEG::draw(JPEGDRAW *pDraw) {
     MatrixPanel_I2S_DMA *display = static_cast<MatrixPanel_I2S_DMA*>(pDraw->pUser);
     uint16_t *s = pDraw->pPixels;
     int lastX = pDraw->x + pDraw->iWidth;

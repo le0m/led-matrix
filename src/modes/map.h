@@ -3,7 +3,7 @@
 
 #include <string>
 #include <regex>
-#include "log.h"
+#include "../modules/log.h"
 #include "renderer.h"
 #include "filesystem.h"
 #include <ArduinoJson.h>

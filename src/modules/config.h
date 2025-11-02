@@ -1,7 +1,7 @@
 #ifndef _CONFIG_H
 #define _CONFIG_H
 
-#include "log.h"
+#include "../modules/log.h"
 #include "filesystem.h"
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>

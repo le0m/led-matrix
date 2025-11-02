@@ -2,16 +2,16 @@
 #define _MAIN_H
 
 #include <Arduino.h>
-#include "log.h"
-#include "config.h"
-#include "wifi.h"
-#include "led.h"
-#include "modeselector.h"
-#include "media.h"
-#include "map.h"
-#include "life.h"
-#include "qrcode.h"
-#include "ota.h"
+#include "modules/log.h"
+#include "modules/config.h"
+#include "modules/wifi.h"
+#include "modules/led.h"
+#include "modules/modeselector.h"
+#include "modes/media.h"
+#include "modes/map.h"
+#include "modes/life.h"
+#include "modes/qrcode.h"
+#include "modules/ota.h"
 #include <ArduinoJson.h>
 
 // Pins

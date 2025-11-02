@@ -1,12 +1,12 @@
-#ifndef _IMAGE_H
-#define _IMAGE_H
+#ifndef _JPEG_H
+#define _JPEG_H
 
-#include "log.h"
-#include "filesystem.h"
+#include "../../modules/log.h"
+#include "../../filesystem.h"
 #include <JPEGDEC.h>
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 
-class Image {
+class JPEG {
     private:
         JPEGDEC jpeg;
         ulong lastRender = 0;
@@ -19,8 +19,8 @@ class Image {
 
     public:
         bool isOpen = false;
-        Image();
-        ~Image();
+        JPEG();
+        ~JPEG();
         bool open(const char*);
         void renderFrame(MatrixPanel_I2S_DMA*);
         void close();

@@ -15,7 +15,7 @@ bool Media::open() {
 
 bool Media::close() {
     gif.close();
-    image.close();
+    jpeg.close();
 
     return true;
 };
@@ -43,7 +43,7 @@ bool Media::processImageChunk(AsyncWebServerRequest *request, uint8_t *data, siz
 
         isUpdating = true;
         gif.close();
-        image.close();
+        jpeg.close();
         if (!deleteFile(GIF_PATH)) {
             Log::instance()->warning("Error deleting previous GIF\n");
             request->send(500, "text/plain", "error deleting previous GIF");
@@ -90,7 +90,7 @@ bool Media::processGIFChunk(AsyncWebServerRequest *request, uint8_t *data, size_
 
         isUpdating = true;
         gif.close();
-        image.close();
+        jpeg.close();
         if (!deleteFile(GIF_PATH)) {
             Log::instance()->error("Error deleting previous GIF\n");
             request->send(500, "text/plain", "error deleting previous GIF");
@@ -140,7 +140,7 @@ void Media::initServer(AsyncWebServer *server) {
     server->on("/drawer", HTTP_DELETE, [&](AsyncWebServerRequest *request) {
         mediaType = MEDIA_TYPE_NONE;
         gif.close();
-        image.close();
+        jpeg.close();
         Log::instance()->info("Deleting media\n");
         if (!deleteFile(GIF_PATH)) {
             Log::instance()->error("Error deleting GIF\n");
@@ -202,12 +202,12 @@ void Media::initServer(AsyncWebServer *server) {
 };
 
 bool Media::loadMedia() {
-    if (image.isOpen || gif.isOpen) {
+    if (jpeg.isOpen || gif.isOpen) {
         return true;
     }
 
     if (pathExists(IMAGE_PATH)) {
-        if (image.open(IMAGE_PATH)) {
+        if (jpeg.open(IMAGE_PATH)) {
             Log::instance()->info("Loaded image from FLASH\n");
             mediaType = MEDIA_TYPE_IMAGE;
 
@@ -263,7 +263,7 @@ void Media::render(MatrixPanel_I2S_DMA *display) {
             drawNewImage = false;
         }
 
-        image.renderFrame(display);
+        jpeg.renderFrame(display);
 
         return;
     }

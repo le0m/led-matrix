@@ -1,7 +1,7 @@
 #ifndef _LIFE_H
 #define _LIFE_H
 
-#include "log.h"
+#include "../modules/log.h"
 #include "renderer.h"
 #include <stdint.h>
 #include <FastLED.h>

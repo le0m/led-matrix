@@ -1,12 +1,12 @@
 #ifndef _MEDIA_H
 #define _MEDIA_H
 
-#include "log.h"
+#include "../modules/log.h"
 #include "renderer.h"
 #include <stdint.h>
 #include "filesystem.h"
-#include "image.h"
-#include "gif.h"
+#include "media/jpeg.h"
+#include "media/gif.h"
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 
 #define IMAGE_PATH "/image.jpeg"
@@ -21,7 +21,7 @@ class Media : public Renderer {
         } media_type;
         bool drawNewImage = false;
         GIF gif;
-        Image image;
+        JPEG jpeg;
         media_type mediaType = MEDIA_TYPE_NONE;
         bool isUpdating = false;
         bool loadMedia();

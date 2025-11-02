@@ -1,7 +1,7 @@
 #ifndef _QRCODE_H
 #define _QRCODE_H
 
-#include "log.h"
+#include "../modules/log.h"
 #include "renderer.h"
 #include "qrcodegen.h"
 #define QR_BORDER_PX 4
