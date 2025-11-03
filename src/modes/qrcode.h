@@ -5,12 +5,12 @@
 #include "renderer.h"
 #include "qrcodegen.h"
 #define QR_BORDER_PX 4
-#define QR_VERSION 2
-#define QR_TEXT_MAX_LENGTH QR_VERSION * 4 + 17
+#define QR_VERSION 3
+#define QR_TEXT_MAX_LENGTH 32 // version 3, binary data, quartile error correction (see https://www.qrcode.com/en/about/version.html)
 
 class QRCode : public Renderer {
     private:
-        uint8_t qr0[qrcodegen_BUFFER_LEN_FOR_VERSION(2)];
+        uint8_t qr0[qrcodegen_BUFFER_LEN_FOR_VERSION(QR_VERSION)];
         char text[QR_TEXT_MAX_LENGTH];
         bool changed = true;
 
