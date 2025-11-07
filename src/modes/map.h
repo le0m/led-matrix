@@ -33,7 +33,6 @@ class Map : public Renderer {
         bool isOpen = false;
         JsonDocument config;
         static void asyncUpdateCrop(void*);
-        bool loadMedia();
         static int draw(JPEGDRAW*);
         static void* openFile(const char*, int32_t*);
         static void closeFile(void*);

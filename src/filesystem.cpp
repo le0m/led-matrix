@@ -1,7 +1,7 @@
 #include "filesystem.h"
 
 // see readme "Note on PlatformIO"
-bool pathExists(const char *path) {
+bool Filesystem::pathExists(const char *path) {
     static struct stat pathStat;
     char fullPath[64];
     snprintf(fullPath, sizeof(fullPath), "/littlefs%s", path);
@@ -9,15 +9,15 @@ bool pathExists(const char *path) {
     return stat(fullPath, &pathStat) == 0;
 };
 
-bool deleteFile(const char *path) {
-    if (!pathExists(path)) {
+bool Filesystem::deleteFile(const char *path) {
+    if (!Filesystem::pathExists(path)) {
         return true;
     }
 
     return LittleFS.remove(path);
 };
 
-bool writeBytes(const char *path, uint8_t *buf, size_t size) {
+bool Filesystem::writeBytes(const char *path, uint8_t *buf, size_t size) {
     File file = LittleFS.open(path, FILE_APPEND);
     if (!file) {
         Log::instance()->error("Error opening file for write: %s\n", path);
@@ -39,8 +39,8 @@ bool writeBytes(const char *path, uint8_t *buf, size_t size) {
     return true;
 };
 
-bool readBytes(const char *path, uint8_t *buf, size_t size) {
-    if (!pathExists(path)) {
+bool Filesystem::readBytes(const char *path, uint8_t *buf, size_t size) {
+    if (!Filesystem::pathExists(path)) {
         return false;
     }
 
@@ -65,7 +65,7 @@ bool readBytes(const char *path, uint8_t *buf, size_t size) {
     return true;
 };
 
-bool writeConfig(const char *path, JsonDocument& cfg) {
+bool Filesystem::writeConfig(const char *path, JsonDocument& cfg) {
     File file = LittleFS.open(path, FILE_WRITE);
     if (!file) {
         Log::instance()->error("Error opening config for write: %s\n", path);
@@ -85,9 +85,9 @@ bool writeConfig(const char *path, JsonDocument& cfg) {
     return true;
 };
 
-JsonDocument readConfig(const char *path) {
+JsonDocument Filesystem::readConfig(const char *path) {
     JsonDocument cfg;
-    if (!pathExists(path)) {
+    if (!Filesystem::pathExists(path)) {
         Log::instance()->error("Config file does not exist: %s\n", path);
 
         return cfg;

@@ -5,8 +5,8 @@
 #include "renderer.h"
 #include <stdint.h>
 #include "filesystem.h"
-#include "media/jpeg.h"
-#include "media/gif.h"
+#include "../decoders/jpeg.h"
+#include "../decoders/gif.h"
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 
 #define IMAGE_PATH "/image.jpeg"
@@ -19,14 +19,9 @@ class Media : public Renderer {
             MEDIA_TYPE_IMAGE = 1,
             MEDIA_TYPE_GIF   = 2,
         } media_type;
-        bool drawNewImage = false;
-        GIF gif;
-        JPEG jpeg;
+        Decoder *current;
         media_type mediaType = MEDIA_TYPE_NONE;
-        bool isUpdating = false;
-        bool loadMedia();
-        bool processImageChunk(AsyncWebServerRequest*, uint8_t*, size_t, size_t, size_t);
-        bool processGIFChunk(AsyncWebServerRequest*, uint8_t*, size_t, size_t, size_t);
+        bool checkSize(AsyncWebServerRequest*, size_t);
 
     public:
         Media(uint8_t, uint8_t);

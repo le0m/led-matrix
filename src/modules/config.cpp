@@ -10,11 +10,11 @@ Config::~Config() {
 };
 
 bool Config::save(const char *path) {
-    return writeConfig(path, current);
+    return Filesystem::writeConfig(path, current);
 };
 
 bool Config::load(const char *path) {
-    current = readConfig(path);
+    current = Filesystem::readConfig(path);
 
     return !current.isNull();
 };

@@ -10,7 +10,27 @@ Map::~Map() {
 };
 
 bool Map::open() {
-    return loadMedia();
+    if (isOpen) {
+        return true;
+    }
+
+    if (!Filesystem::pathExists(MAP_PATH)) {
+        Log::instance()->trace("No map stored\n");
+
+        return false;
+    }
+
+    if (!jpeg.open(MAP_PATH, openFile, closeFile, readFile, seekFile, draw)) {
+        Log::instance()->error("Error opening map\n");
+
+        return false;
+    }
+
+    lastRender = 0;
+    isOpen = true;
+    Log::instance()->info("Loaded map\n");
+
+    return true;
 };
 
 bool Map::close() {
@@ -37,7 +57,7 @@ void Map::setConfig(JsonVariantConst c) {
 
 void Map::initServer(AsyncWebServer *server) {
     server->on("/map", HTTP_GET, [&](AsyncWebServerRequest *request) {
-        if (!pathExists(MAP_PATH)) {
+        if (!Filesystem::pathExists(MAP_PATH)) {
             Log::instance()->info("No map currently stored\n");
             request->send(204);
 
@@ -50,14 +70,13 @@ void Map::initServer(AsyncWebServer *server) {
     server->on("/map", HTTP_DELETE, [&](AsyncWebServerRequest *request) {
         close();
         Log::instance()->info("Deleting map\n");
-        if (!deleteFile(MAP_PATH)) {
+        if (!Filesystem::deleteFile(MAP_PATH)) {
             Log::instance()->error("Error deleting map\n");
             request->send(500, "text/plain", "error deleting map");
 
             return;
         }
 
-        Log::instance()->info("Map deleted\n");
         request->send(204);
     });
     server->on("/map", HTTP_POST,
@@ -86,8 +105,8 @@ void Map::initServer(AsyncWebServer *server) {
             }
             if (index == 0) {
                 Log::instance()->debug("Receiving map: %d bytes\n", total);
-                if (total > MAX_IMAGE_SIZE) {
-                    Log::instance()->error("Map size %d exceeds maximum size %d\n", total, MAX_IMAGE_SIZE);
+                if (total > MAX_FILE_SIZE) {
+                    Log::instance()->error("Map size %d exceeds maximum size %d\n", total, MAX_FILE_SIZE);
                     request->send(400, "text/plain", "map is too big");
 
                     return;
@@ -101,7 +120,7 @@ void Map::initServer(AsyncWebServer *server) {
 
                 isUpdating = true;
                 close();
-                if (!deleteFile(MAP_PATH)) {
+                if (!Filesystem::deleteFile(MAP_PATH)) {
                     Log::instance()->warning("Error deleting previous map\n");
                     request->send(500, "text/plain", "error deleting previous map");
 
@@ -112,7 +131,7 @@ void Map::initServer(AsyncWebServer *server) {
             }
 
             Log::instance()->trace("Received map chunk: %d-%d (%d bytes)\n", index, index + len, len);
-            if (!writeBytes(MAP_PATH, data, len)) {
+            if (!Filesystem::writeBytes(MAP_PATH, data, len)) {
                 Log::instance()->error("Error writing map chunk\n");
                 request->send(500, "text/plain", "error writing map");
 
@@ -120,30 +139,6 @@ void Map::initServer(AsyncWebServer *server) {
             }
         }
     );
-};
-
-bool Map::loadMedia() {
-    if (isOpen) {
-        return true;
-    }
-
-    if (!pathExists(MAP_PATH)) {
-        Log::instance()->trace("No map stored in FLASH\n");
-
-        return false;
-    }
-
-    if (!jpeg.open(MAP_PATH, openFile, closeFile, readFile, seekFile, draw)) {
-        Log::instance()->error("Error opening map from FLASH\n");
-
-        return false;
-    }
-
-    lastRender = 0;
-    isOpen = true;
-    Log::instance()->info("Loaded map from FLASH\n");
-
-    return true;
 };
 
 bool Map::setHeaders(HTTPClient &client, const char *headers) {
@@ -348,14 +343,9 @@ void Map::render(MatrixPanel_I2S_DMA *display) {
         return;
     }
 
+    // TODO: test if this is still true
     // Call to open is here because trying to open in webserver endpoint (right after finished writing) causes a panic and reboot
-    if (!loadMedia()) {
-        return;
-    }
-
-    if (!isOpen) {
-        display->clearScreen();
-
+    if (!open()) {
         return;
     }
 
@@ -396,8 +386,6 @@ void* Map::openFile(const char *path, int32_t *size) {
         return static_cast<void*>(file);
     }
 
-    delete file;
-
     return NULL;
 };
 
@@ -405,7 +393,6 @@ void Map::closeFile(void *pHandle) {
     File *f = static_cast<File *>(pHandle);
     if (f != NULL) {
         f->close();
-        delete f;
     }
 };
 

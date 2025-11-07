@@ -10,12 +10,58 @@ Media::~Media() {
 };
 
 bool Media::open() {
-    return loadMedia();
+    if (current != nullptr && current->isOpen()) {
+        return true;
+    }
+
+    if (current != nullptr) {
+        delete current;
+    }
+
+    if (DecoderJPEG::fileExists()) {
+        current = new DecoderJPEG();
+        if (!current->open()) {
+            Log::instance()->error("Error opening JPEG\n");
+            mediaType = MEDIA_TYPE_NONE;
+
+            return false;
+        }
+
+        Log::instance()->info("Loaded JPEG\n");
+        mediaType = MEDIA_TYPE_IMAGE;
+
+        return true;
+    }
+
+    if (DecoderGIF::fileExists()) {
+        current = new DecoderGIF();
+        if (!current->open()) {
+            Log::instance()->error("Error opening GIF\n");
+            mediaType = MEDIA_TYPE_NONE;
+
+            return false;
+        }
+
+        Log::instance()->info("Loaded GIF\n");
+        mediaType = MEDIA_TYPE_GIF;
+
+        return true;
+    }
+
+    Log::instance()->trace("No media stored\n");
+    mediaType = MEDIA_TYPE_NONE;
+
+    return false;
 };
 
 bool Media::close() {
-    gif.close();
-    jpeg.close();
+    if (current == nullptr) {
+        return true;
+    }
+
+
+    delete current;
+    current = nullptr;
 
     return true;
 };
@@ -24,93 +70,17 @@ void Media::print() {
     // TODO
 };
 
-bool Media::processImageChunk(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-    if (index == 0) {
-        mediaType = MEDIA_TYPE_NONE;
-        Log::instance()->debug("Receiving image: %d bytes\n", total);
-        if (total > MAX_IMAGE_SIZE) {
-            Log::instance()->error("Image size %d exceeds maximum size %d\n", total, MAX_IMAGE_SIZE);
-            request->send(400, "text/plain", "image is too big");
-
-            return false;
-        }
-        if (total > LittleFS.totalBytes() - LittleFS.usedBytes()) {
-            Log::instance()->error("Image size %d is within limit, but disk has not enough free space (%d)\n", total, LittleFS.totalBytes() - LittleFS.usedBytes());
-            request->send(500, "text/plain", "not enough free space");
-
-            return false;
-        }
-
-        isUpdating = true;
-        gif.close();
-        jpeg.close();
-        if (!deleteFile(GIF_PATH)) {
-            Log::instance()->warning("Error deleting previous GIF\n");
-            request->send(500, "text/plain", "error deleting previous GIF");
-
-            return false;
-        }
-        if (!deleteFile(IMAGE_PATH)) {
-            Log::instance()->warning("Error deleting previous image\n");
-            request->send(500, "text/plain", "error deleting previous image");
-
-            return false;
-        }
-
-        Log::instance()->debug("Previous image and GIF deleted or not present\n");
-    }
-
-    Log::instance()->trace("Received image chunk: %d-%d (%d bytes)\n", index, index + len, len);
-    if (!writeBytes(IMAGE_PATH, data, len)) {
-        Log::instance()->error("Error writing image chunk\n");
-        request->send(500, "text/plain", "error writing image");
+bool Media::checkSize(AsyncWebServerRequest *request, size_t size) {
+    if (size > MAX_FILE_SIZE) {
+        Log::instance()->error("File size %d exceeds maximum size %d\n", size, MAX_FILE_SIZE);
+        request->send(400, "text/plain", "file is too big");
 
         return false;
     }
 
-    return true;
-};
-
-bool Media::processGIFChunk(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-    if (index == 0) {
-        mediaType = MEDIA_TYPE_NONE;
-        Log::instance()->debug("Receiving GIF: %d bytes\n", total);
-        if (total > MAX_GIF_SIZE) {
-            Log::instance()->debug("GIF size %d exceeds maximum size %d\n", total, MAX_GIF_SIZE);
-            request->send(400, "text/plain", "GIF too big");
-
-            return false;
-        }
-        if (total > LittleFS.totalBytes() - LittleFS.usedBytes()) {
-            Log::instance()->error("GIF size %d is within limit, but disk has not enough free space (%d)\n", total, LittleFS.totalBytes() - LittleFS.usedBytes());
-            request->send(500, "text/plain", "not enough free space");
-
-            return false;
-        }
-
-        isUpdating = true;
-        gif.close();
-        jpeg.close();
-        if (!deleteFile(GIF_PATH)) {
-            Log::instance()->error("Error deleting previous GIF\n");
-            request->send(500, "text/plain", "error deleting previous GIF");
-
-            return false;
-        }
-        if (!deleteFile(IMAGE_PATH)) {
-            Log::instance()->error("Error deleting previous image\n");
-            request->send(500, "text/plain", "error deleting previous image");
-
-            return false;
-        }
-
-        Log::instance()->debug("Previous image and GIF deleted or not present\n");
-    }
-
-    Log::instance()->trace("Received GIF chunk: %d-%d (%d bytes)\n", index, index + len, len);
-    if (!writeBytes(GIF_PATH, data, len)) {
-        Log::instance()->error("Error writing GIF chunk\n");
-        request->send(500, "text/plain", "error writing GIF");
+    if (size > LittleFS.totalBytes() - LittleFS.usedBytes()) {
+        Log::instance()->error("File size %d is within limit, but disk has not enough free space (%d)\n", size, LittleFS.totalBytes() - LittleFS.usedBytes());
+        request->send(500, "text/plain", "not enough free space");
 
         return false;
     }
@@ -120,17 +90,7 @@ bool Media::processGIFChunk(AsyncWebServerRequest *request, uint8_t *data, size_
 
 void Media::initServer(AsyncWebServer *server) {
     server->on("/drawer", HTTP_GET, [&](AsyncWebServerRequest *request) {
-        if (pathExists(IMAGE_PATH)) {
-            Log::instance()->info("Sending current image\n");
-            request->send(LittleFS, IMAGE_PATH, "image/jpeg");
-
-            return;
-        }
-
-        if (pathExists(GIF_PATH)) {
-            Log::instance()->info("Sending current GIF\n");
-            request->send(LittleFS, GIF_PATH, "image/gif");
-
+        if (current != nullptr && current->sendFile(request)) {
             return;
         }
 
@@ -138,24 +98,26 @@ void Media::initServer(AsyncWebServer *server) {
         request->send(204);
     });
     server->on("/drawer", HTTP_DELETE, [&](AsyncWebServerRequest *request) {
+        if (current == nullptr) {
+            Log::instance()->info("No media to delete\n");
+            request->send(204);
+
+            return;
+        }
+
         mediaType = MEDIA_TYPE_NONE;
-        gif.close();
-        jpeg.close();
-        Log::instance()->info("Deleting media\n");
-        if (!deleteFile(GIF_PATH)) {
-            Log::instance()->error("Error deleting GIF\n");
-            request->send(500, "text/plain", "error deleting GIF");
+        current->close();
+        Log::instance()->info("Deleting current media\n");
 
-            return;
-        }
-        if (!deleteFile(IMAGE_PATH)) {
-            Log::instance()->error("Error deleting image\n");
-            request->send(500, "text/plain", "error deleting image");
+        if (!current->deleteFile()) {
+            Log::instance()->error("Error deleting file\n");
+            request->send(500, "text/plain", "error deleting file");
 
             return;
         }
 
-        Log::instance()->info("Media deleted\n");
+        delete current;
+        current = nullptr;
         request->send(204);
     });
     server->on("/drawer", HTTP_POST,
@@ -169,108 +131,78 @@ void Media::initServer(AsyncWebServer *server) {
                 return;
             }
             if (contentType->value() == "image/jpeg") {
-                drawNewImage = true;
                 Log::instance()->info("Image stored\n");
                 mediaType = MEDIA_TYPE_IMAGE;
-            }
-            if (contentType->value() == "image/gif") {
+            } else if (contentType->value() == "image/gif") {
                 Log::instance()->info("GIF stored\n");
                 mediaType = MEDIA_TYPE_GIF;
             }
 
-            isUpdating = false;
             request->send(204);
         },
         nullptr,
         [&](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-            const AsyncWebHeader *contentType = request->getHeader("Content-Type");
-            if (contentType->value() == "image/jpeg") {
-                processImageChunk(request, data, len, index, total);
+            if (index == 0) {
+                Log::instance()->debug("Receiving file: %d bytes\n", total);
+                const AsyncWebHeader *contentType = request->getHeader("Content-Type");
 
-                return;
+                if (contentType->value() != "image/jpeg" && contentType->value() != "image/gif") {
+                    Log::instance()->error("Uploaded file has unhandled content-type: %s\n", contentType->value());
+                    request->send(400, "text/plain", "unhandled content type");
+
+                    return;
+                }
+
+                if (!checkSize(request, total)) {
+                    return;
+                }
+
+                mediaType = MEDIA_TYPE_NONE;
+
+                if (current != nullptr) {
+                    current->close();
+
+                    if (!current->deleteFile()) {
+                        Log::instance()->warning("Error deleting previous file\n");
+                        request->send(500, "text/plain", "error deleting previous file");
+
+                        return;
+                    }
+
+                    Log::instance()->debug("Previous media deleted or not present\n");
+                    delete current;
+                    current = nullptr;
+                }
+
+                if (contentType->value() == "image/jpeg") {
+                    current = new DecoderJPEG();
+                } else if (contentType->value() == "image/gif") {
+                    current = new DecoderGIF();
+                } // else... checked before
             }
-            if (contentType->value() == "image/gif") {
-                processGIFChunk(request, data, len, index, total);
 
-                return;
+            Log::instance()->trace("Received file chunk: %d-%d (%d bytes)\n", index, index + len, len);
+
+            if (current == nullptr || !current->writeFile(data, len)) {
+                Log::instance()->error("Error writing file chunk\n");
+                request->send(500, "text/plain", "error writing file");
             }
-
-            Log::instance()->error("Uploaded file has unhandled content-type: %s\n", contentType->value());
-            request->send(400, "text/plain", "unhandled content type");
         }
     );
 };
 
-bool Media::loadMedia() {
-    if (jpeg.isOpen || gif.isOpen) {
-        return true;
-    }
-
-    if (pathExists(IMAGE_PATH)) {
-        if (jpeg.open(IMAGE_PATH)) {
-            Log::instance()->info("Loaded image from FLASH\n");
-            mediaType = MEDIA_TYPE_IMAGE;
-
-            return true;
-        }
-
-        Log::instance()->error("Error opening image from FLASH\n");
-        mediaType = MEDIA_TYPE_NONE;
-
-        return false;
-    }
-
-    if (pathExists(GIF_PATH)) {
-        if (gif.open(GIF_PATH)) {
-            Log::instance()->info("Loaded GIF from FLASH\n");
-            mediaType = MEDIA_TYPE_GIF;
-
-            return true;
-        }
-
-        Log::instance()->error("Error opening GIF from FLASH\n");
-        mediaType = MEDIA_TYPE_NONE;
-
-        return false;
-    }
-
-    Log::instance()->trace("No media stored in FLASH\n");
-    mediaType = MEDIA_TYPE_NONE;
-
-    return false;
-};
-
 void Media::render(MatrixPanel_I2S_DMA *display) {
-    if (isUpdating) {
-        return;
-    }
-
-    if (mediaType == MEDIA_TYPE_NONE) {
+    if (mediaType == MEDIA_TYPE_NONE || current == nullptr) {
         display->clearScreen();
 
         return;
     }
 
+    // TODO: test if this is still true
     // Call to open is here because trying to open in webserver endpoint (right after finished writing) causes a panic and reboot
-    if (!loadMedia()) {
+    if (!open()) {
         return;
     }
 
-    if (mediaType == MEDIA_TYPE_IMAGE) {
-        // Clear screen only if a new image was uploaded.
-        if (drawNewImage) {
-            display->clearScreen();
-            drawNewImage = false;
-        }
-
-        jpeg.renderFrame(display);
-
-        return;
-    }
-
-    if (mediaType == MEDIA_TYPE_GIF) {
-        gif.renderFrame(display);
-
-        return;
-    }
+    current->renderFrame(display);
 };

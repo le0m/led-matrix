@@ -4,37 +4,60 @@
  * Original code taken from https://github.com/mrcodetastic/ESP32-HUB75-MatrixPanel-DMA/blob/fb3499fb66fb4941af8a818eb9be0548fe4b7a60/examples/AnimatedGIFPanel_LittleFS/AnimatedGIFPanel_LittleFS.ino
  */
 
-GIF::GIF() {};
+DecoderGIF::DecoderGIF() {};
 
-GIF::~GIF() {
-    gif.close();
+DecoderGIF::~DecoderGIF() {
+    close();
 };
 
-bool GIF::open(const char *path) {
-    if (isOpen) {
+bool DecoderGIF::fileExists() {
+    return Filesystem::pathExists(GIF_FILE_PATH);
+};
+
+bool DecoderGIF::deleteFile() {
+    return Filesystem::deleteFile(GIF_FILE_PATH);
+};
+
+bool DecoderGIF::writeFile(uint8_t *data, size_t len) {
+    return Filesystem::writeBytes(GIF_FILE_PATH, data, len);
+};
+
+bool DecoderGIF::sendFile(AsyncWebServerRequest *request) {
+    if (!fileExists()) {
+        return false;
+    }
+
+    Log::instance()->info("Sending current GIF\n");
+    request->send(LittleFS, GIF_FILE_PATH, GIF_FILE_TYPE);
+
+    return true;
+};
+
+bool DecoderGIF::open() {
+    if (isOpen_) {
         return true;
     }
 
-    isOpen = true;
+    isOpen_ = true;
     gif.begin(GIF_PALETTE_RGB565_LE);
 
-    return gif.open(path, openFile, closeFile, readFile, seekFile, drawLine);
+    return gif.open(GIF_FILE_PATH, openFile, closeFile, readFile, seekFile, drawLine);
 };
 
-void GIF::close() {
-    if (!isOpen) {
+void DecoderGIF::close() {
+    if (!isOpen_) {
         return;
     }
 
-    isOpen = false;
+    isOpen_ = false;
     delay(50); // wait for possible renderFrame() execution to finish
     gif.close();
     frameDelay = 0;
     lastGifFrameRender = 0;
 };
 
-void GIF::renderFrame(MatrixPanel_I2S_DMA  *display) {
-    if (!isOpen || millis() - lastGifFrameRender < frameDelay) {
+void DecoderGIF::renderFrame(MatrixPanel_I2S_DMA  *display) {
+    if (!isOpen_ || millis() - lastGifFrameRender < frameDelay) {
         return;
     }
 
@@ -50,7 +73,7 @@ void GIF::renderFrame(MatrixPanel_I2S_DMA  *display) {
     }
 };
 
-void* GIF::openFile(const char *fname, int32_t *pSize) {
+void* DecoderGIF::openFile(const char *fname, int32_t *pSize) {
     File *file = new File();
     *file = LittleFS.open(fname);
     if (file) {
@@ -59,20 +82,17 @@ void* GIF::openFile(const char *fname, int32_t *pSize) {
         return static_cast<void*>(file);
     }
 
-    delete file;
-
     return NULL;
 };
 
-void GIF::closeFile(void *pHandle) {
+void DecoderGIF::closeFile(void *pHandle) {
     File *f = static_cast<File *>(pHandle);
     if (f != NULL) {
         f->close();
-        delete f;
     }
 };
 
-int32_t GIF::readFile(GIFFILE *pFile, uint8_t *pBuf, int32_t iLen) {
+int32_t DecoderGIF::readFile(GIFFILE *pFile, uint8_t *pBuf, int32_t iLen) {
     int32_t iBytesRead;
     iBytesRead = iLen;
     File *f = static_cast<File *>(pFile->fHandle);
@@ -90,7 +110,7 @@ int32_t GIF::readFile(GIFFILE *pFile, uint8_t *pBuf, int32_t iLen) {
     return iBytesRead;
 };
 
-int32_t GIF::seekFile(GIFFILE *pFile, int32_t iPosition) {
+int32_t DecoderGIF::seekFile(GIFFILE *pFile, int32_t iPosition) {
     File *f = static_cast<File *>(pFile->fHandle);
     f->seek(iPosition);
     pFile->iPos = (int32_t)f->position();
@@ -99,7 +119,7 @@ int32_t GIF::seekFile(GIFFILE *pFile, int32_t iPosition) {
 };
 
 // Draw a line of image directly on the LED Matrix
-void GIF::drawLine(GIFDRAW *pDraw) {
+void DecoderGIF::drawLine(GIFDRAW *pDraw) {
     MatrixPanel_I2S_DMA *display = static_cast<MatrixPanel_I2S_DMA*>(pDraw->pUser);
     uint8_t *s;
     uint16_t *d, *usPalette, usTemp[320];
@@ -114,11 +134,11 @@ void GIF::drawLine(GIFDRAW *pDraw) {
     y = pDraw->iY + pDraw->y; // current line
     s = pDraw->pPixels;
     // restore to background color
-    if (pDraw->ucDisposalMethod == 2){
-        for (x = 0; x < iWidth; x++)
-        {
-            if (s[x] == pDraw->ucTransparent)
+    if (pDraw->ucDisposalMethod == 2) {
+        for (x = 0; x < iWidth; x++) {
+            if (s[x] == pDraw->ucTransparent) {
                 s[x] = pDraw->ucBackground;
+            }
         }
         pDraw->ucHasTransparency = 0;
     }

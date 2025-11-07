@@ -1,36 +1,60 @@
 #include "jpeg.h"
 
-JPEG::JPEG() {};
+DecoderJPEG::DecoderJPEG() {};
 
-JPEG::~JPEG() {
-    jpeg.close();
+DecoderJPEG::~DecoderJPEG() {
+    close();
 };
 
-bool JPEG::open(const char *path) {
-    if (isOpen) {
+bool DecoderJPEG::fileExists() {
+    return Filesystem::pathExists(JPEG_FILE_PATH);
+};
+
+bool DecoderJPEG::deleteFile() {
+    return Filesystem::deleteFile(JPEG_FILE_PATH);
+};
+
+bool DecoderJPEG::writeFile(uint8_t *data, size_t len) {
+    return Filesystem::writeBytes(JPEG_FILE_PATH, data, len);
+};
+
+bool DecoderJPEG::sendFile(AsyncWebServerRequest *request) {
+    if (!fileExists()) {
+        return false;
+    }
+
+    Log::instance()->info("Sending current JPEG\n");
+    request->send(LittleFS, JPEG_FILE_PATH, JPEG_FILE_TYPE);
+
+    return true;
+};
+
+bool DecoderJPEG::open() {
+    if (isOpen_) {
         return true;
     }
 
-    lastRender = 0;
-    isOpen = true;
 
-    return jpeg.open(path, openFile, closeFile, readFile, seekFile, draw);
+    lastRender = 0;
+    isOpen_ = true;
+
+    return jpeg.open(JPEG_FILE_PATH, openFile, closeFile, readFile, seekFile, draw);
 };
 
-void JPEG::close() {
-    if (!isOpen) {
+void DecoderJPEG::close() {
+    if (!isOpen_) {
         return;
     }
 
-    isOpen = false;
+    isOpen_ = false;
     delay(50); // wait for possible renderFrame() execution to finish
     jpeg.close();
     lastRender = 0;
 };
 
-void JPEG::renderFrame(MatrixPanel_I2S_DMA  *display) {
+void DecoderJPEG::renderFrame(MatrixPanel_I2S_DMA  *display) {
     // Render once
-    if (!isOpen || lastRender > 0) {
+    if (!isOpen_ || lastRender > 0) {
         return;
     }
 
@@ -41,7 +65,7 @@ void JPEG::renderFrame(MatrixPanel_I2S_DMA  *display) {
     }
 };
 
-void* JPEG::openFile(const char *path, int32_t *size) {
+void* DecoderJPEG::openFile(const char *path, int32_t *size) {
     File *file = new File();
     *file = LittleFS.open(path);
     if (file) {
@@ -50,20 +74,17 @@ void* JPEG::openFile(const char *path, int32_t *size) {
         return static_cast<void*>(file);
     }
 
-    delete file;
-
     return NULL;
 };
 
-void JPEG::closeFile(void *pHandle) {
+void DecoderJPEG::closeFile(void *pHandle) {
     File *f = static_cast<File *>(pHandle);
     if (f != NULL) {
         f->close();
-        delete f;
     }
 };
 
-int32_t JPEG::readFile(JPEGFILE *pFile, uint8_t *pBuf, int32_t iLen) {
+int32_t DecoderJPEG::readFile(JPEGFILE *pFile, uint8_t *pBuf, int32_t iLen) {
     int32_t iBytesRead;
     iBytesRead = iLen;
     File *f = static_cast<File *>(pFile->fHandle);
@@ -81,7 +102,7 @@ int32_t JPEG::readFile(JPEGFILE *pFile, uint8_t *pBuf, int32_t iLen) {
     return iBytesRead;
 };
 
-int32_t JPEG::seekFile(JPEGFILE *pFile, int32_t iPosition) {
+int32_t DecoderJPEG::seekFile(JPEGFILE *pFile, int32_t iPosition) {
     File *f = static_cast<File *>(pFile->fHandle);
     f->seek(iPosition);
     pFile->iPos = (int32_t)f->position();
@@ -89,7 +110,7 @@ int32_t JPEG::seekFile(JPEGFILE *pFile, int32_t iPosition) {
     return pFile->iPos;
 };
 
-int JPEG::draw(JPEGDRAW *pDraw) {
+int DecoderJPEG::draw(JPEGDRAW *pDraw) {
     MatrixPanel_I2S_DMA *display = static_cast<MatrixPanel_I2S_DMA*>(pDraw->pUser);
     uint16_t *s = pDraw->pPixels;
     int lastX = pDraw->x + pDraw->iWidth;
