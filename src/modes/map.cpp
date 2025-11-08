@@ -212,7 +212,8 @@ std::array<double, 2> Map::matchRegex(const char* res, const char *r) {
 
 std::array<double, 2> Map::getPositionFromAPI() {
     std::array<double, 2> pos = { 0, 0 };
-    WiFiClient client;
+    WiFiClientSecure client;
+    client.setInsecure(); // TODO: load a CA certificates bundle
     HTTPClient http;
     http.setReuse(false);
     http.setConnectTimeout(10000);
