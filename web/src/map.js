@@ -331,8 +331,12 @@ export const map = (state) => {
 
 			return;
 		}
-		if (e.target.files[0].type !== 'image/jpeg') {
-			console.error(`Selected image is not JPEG: ${e.target.files[0].type}`);
+
+		const file = e.target.files[0];
+
+		if (!file.type.startsWith('image/') || file.type === 'image/gif') {
+			console.error(`Selected file not supported: ${file.type}`);
+			showMessage(feedbackMessage, 'Only image files are supported', 'is-error');
 
 			return;
 		}
@@ -340,7 +344,7 @@ export const map = (state) => {
 		// Fill canvas with black, because the LED panel is black
 		context.fillRect(0, 0, canvas.width, canvas.height);
 		resetMessage(feedbackMessage);
-		currentFile = e.target.files[0];
+		currentFile = file;
 		fileLabel.innerText = currentFile.name;
 		fileRemove.classList.remove('is-hidden');
 		handleFile(currentFile);
@@ -349,11 +353,11 @@ export const map = (state) => {
 	// Send map image and config to server
 	submitFile.addEventListener('click', async () => {
 		setDisabled(submitFile, true);
-		if (currentFile) {
+		if (currentFile && imageData) {
 			showMessage(feedbackMessage, 'Uploading map...', 'is-primary');
 
 			uploadProgress.classList.remove('is-hidden');
-			const success = await state.uploadMap(imageData, currentFile.type, (progress) =>
+			const success = await state.uploadMap(imageData, 'image/jpeg', (progress) =>
 				setProgress(uploadProgress, (100 * progress.current) / progress.total, 'is-primary'),
 			);
 			uploadProgress.classList.add('is-hidden');

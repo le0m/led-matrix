@@ -114,7 +114,6 @@ The LED panel has 4 display modes, depending on the frame orientation:
 - add FPS and other Life config
 - music visualizer (needs mic)
 - setting for map remote API pull time (15m, 30m, 1h)
-- support PNG
 - map:
     - zoom (need scaling on esp32)
     - other position centering methods (center on point, use a margin to move the view before the position reaches the panel border, ...)

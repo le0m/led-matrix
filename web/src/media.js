@@ -72,7 +72,7 @@ const loadImage = async (file) => {
 
 	// Draw preview
 	context.drawImage(img, 0, 0, imgW, imgH, dstX, dstY, dstW, dstH);
-	imageData = await canvasToImage(canvas, file.type).then((blob) => blob.bytes());
+	imageData = await canvasToImage(canvas).then((blob) => blob.bytes());
 	if (imageData.byteLength > maxSize) {
 		console.error(
 			`Not enough space for storing image (${humanFileSize(imageData.byteLength)}), max size allowed is ${humanFileSize(maxSize)}`,
@@ -234,10 +234,10 @@ export const media = (state) => {
 			return;
 		}
 
-		if (media.contentType === 'image/jpeg') {
-			await loadImage(media.file);
-		} else if (media.contentType === 'image/gif') {
+		if (media.contentType === 'image/gif') {
 			await loadGif(media.file);
+		} else if (media.contentType.startsWith('image/')) {
+			await loadImage(media.file);
 		} else {
 			console.error(`Unhandled content type for current image: ${media.contentType}`);
 		}
@@ -283,9 +283,12 @@ export const media = (state) => {
 
 			return;
 		}
-		if (!['image/jpeg', 'image/gif'].includes(e.target.files[0].type)) {
-			console.error(`Selected media is not JPEG or GIF: ${e.target.files[0].type}`);
-			showMessage(feedbackMessage, 'Only JPEG and GIF files are currently supported', 'is-error');
+
+		const file = e.target.files[0];
+
+		if (!file.type.startsWith('image/')) {
+			console.error(`Selected media is not an image: ${e.target.files[0].type}`);
+			showMessage(feedbackMessage, 'Only image files are supported', 'is-error');
 
 			return;
 		}
@@ -297,10 +300,9 @@ export const media = (state) => {
 		imageData = undefined;
 		canvas.classList.remove('is-hidden');
 		gifPreview.classList.add('is-hidden');
-		const file = e.target.files[0];
 		fileLabel.innerText = file.name;
 		fileRemove.classList.remove('is-hidden');
-		if (file.name.endsWith('.gif')) {
+		if (file.type === 'image/gif') {
 			loadGif(file);
 
 			return;
@@ -313,11 +315,13 @@ export const media = (state) => {
 	submitFile.addEventListener('click', async () => {
 		setDisabled(submitFile, true);
 		showMessage(feedbackMessage, 'Uploading...', 'is-primary');
-		let data;
+		let data, contentType;
 		if (imageData) {
 			data = imageData;
+			contentType = 'image/jpeg';
 		} else if (gifData) {
 			data = gifData;
+			contentType = 'image/gif';
 		} else {
 			console.error('Neither image or gif selected');
 
@@ -325,7 +329,7 @@ export const media = (state) => {
 		}
 
 		uploadProgress.classList.remove('is-hidden');
-		const success = await state.uploadMedia(data, fileInput.files[0].type, (progress) =>
+		const success = await state.uploadMedia(data, contentType, (progress) =>
 			setProgress(uploadProgress, (100 * progress.current) / progress.total, 'is-primary'),
 		);
 		uploadProgress.classList.add('is-hidden');
