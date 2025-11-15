@@ -4,7 +4,7 @@ import {
 	setDisabled,
 	showMessage,
 	readImage,
-	canvasToJpeg,
+	canvasToImage,
 	setProgress,
 } from './utils.js';
 import { parseGIF, decompressFrames } from 'gifuct-js';
@@ -72,7 +72,7 @@ const loadImage = async (file) => {
 
 	// Draw preview
 	context.drawImage(img, 0, 0, imgW, imgH, dstX, dstY, dstW, dstH);
-	imageData = await canvasToJpeg(canvas).then((blob) => blob.bytes());
+	imageData = await canvasToImage(canvas, file.type).then((blob) => blob.bytes());
 	if (imageData.byteLength > maxSize) {
 		console.error(
 			`Not enough space for storing image (${humanFileSize(imageData.byteLength)}), max size allowed is ${humanFileSize(maxSize)}`,
@@ -313,13 +313,11 @@ export const media = (state) => {
 	submitFile.addEventListener('click', async () => {
 		setDisabled(submitFile, true);
 		showMessage(feedbackMessage, 'Uploading...', 'is-primary');
-		let data, contentType;
+		let data;
 		if (imageData) {
 			data = imageData;
-			contentType = 'image/jpeg';
 		} else if (gifData) {
 			data = gifData;
-			contentType = 'image/gif';
 		} else {
 			console.error('Neither image or gif selected');
 
@@ -327,7 +325,7 @@ export const media = (state) => {
 		}
 
 		uploadProgress.classList.remove('is-hidden');
-		const success = await state.uploadMedia(data, contentType, (progress) =>
+		const success = await state.uploadMedia(data, fileInput.files[0].type, (progress) =>
 			setProgress(uploadProgress, (100 * progress.current) / progress.total, 'is-primary'),
 		);
 		uploadProgress.classList.add('is-hidden');

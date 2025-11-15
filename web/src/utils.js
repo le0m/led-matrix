@@ -106,12 +106,13 @@ export const readImage = (data) =>
 	});
 
 /**
- * Convert the canvas to a JPEG image.
+ * Convert the canvas to an image blob.
  *
  * @param {HTMLCanvasElement} canvas
+ * @param {string} type
  * @returns {Promise<Blob>}
  */
-export const canvasToJpeg = (canvas) =>
+export const canvasToImage = (canvas, type = 'image/jpeg') =>
 	new Promise((res, rej) =>
 		canvas.toBlob((blob) => {
 			if (!blob) {
@@ -121,7 +122,7 @@ export const canvasToJpeg = (canvas) =>
 			}
 
 			res(blob);
-		}, 'image/jpeg'),
+		}, type),
 	);
 
 /**

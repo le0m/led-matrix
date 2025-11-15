@@ -6,7 +6,7 @@ import {
 	setProgress,
 	showMessage,
 	readImage,
-	canvasToJpeg,
+	canvasToImage,
 	hexToRgb,
 	rgbToHex,
 } from './utils.js';
@@ -92,7 +92,7 @@ const handleFile = async (file) => {
 	canvas.height = canvasPanel.height * 18;
 	// Scale to canvas size and show preview
 	context.drawImage(img, 0, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
-	imageData = await canvasToJpeg(canvas).then((blob) => blob.bytes());
+	imageData = await canvasToImage(canvas).then((blob) => blob.bytes());
 	if (imageData.byteLength > maxSize) {
 		console.error(
 			`Not enough space for storing map (${humanFileSize(imageData.byteLength)}), max size allowed is ${humanFileSize(maxSize)}`,
