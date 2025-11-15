@@ -1,5 +1,37 @@
 #include "filesystem.h"
 
+void Filesystem::tree(const char *path, uint8_t depth) {
+    File root = LittleFS.open(path);
+
+    if (!root) {
+        Log::instance()->error("error opening path: %s\n", path);
+
+        return;
+    }
+
+    if (!root.isDirectory()) {
+        Log::instance()->error("path is not a directory: %s\n", path);
+        root.close();
+
+        return;
+    }
+
+    Log::instance()->info("%s + %s\n", std::string(depth > 0 ? depth - 1 : depth, ' ').c_str(), root.name());
+    File file = root.openNextFile();
+    while (file) {
+        if (file.isDirectory()) {
+            Filesystem::tree(file.path(), depth + 1);
+        } else {
+            Log::instance()->info("%s |- %s\n", std::string(depth, ' ').c_str(), file.name());
+        }
+
+        file.close();
+        file = root.openNextFile();
+    }
+
+    root.close();
+};
+
 // see readme "Note on PlatformIO"
 bool Filesystem::pathExists(const char *path) {
     static struct stat pathStat;

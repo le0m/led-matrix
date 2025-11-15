@@ -9,6 +9,7 @@
 
 class Filesystem {
     public:
+        static void tree(const char*, uint8_t);
         static bool pathExists(const char*);
         static bool deleteFile(const char*);
         static bool writeBytes(const char*, uint8_t*, size_t);

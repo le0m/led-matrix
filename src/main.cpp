@@ -178,6 +178,7 @@ void setup() {
     server.serveStatic("/", LittleFS, "/www/").setDefaultFile("index.html");
 
     server.begin();
+    // Filesystem::tree("/", 0);
 };
 
 ulong lastModePoll = 0;
