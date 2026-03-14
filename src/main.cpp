@@ -20,37 +20,74 @@ OTA ota(1000);
 draw_mode drawMode = DRAW_MODE_NONE;
 WiFiController wifi;
 Life life(WIDTH, HEIGHT);
-Image image(WIDTH, HEIGHT);
+Media media(WIDTH, HEIGHT);
+Map mapp(WIDTH, HEIGHT);
 QRCode qr(WIDTH, HEIGHT);
 AsyncWebServer server(80);
 ModeSelector selector;
 Config conf(updateConfig);
+Renderer *currentMode = nullptr;
 
 void updateQrText() {
-    String url = wifi.getUrl();
-    Log::instance()->info("QR code URL: %s\n", url.c_str());
-    if (url != "" && !qr.setText(url)) {
+    const char* url = wifi.getUrl();
+    Log::instance()->info("QR code URL: %s\n", url);
+    if (url[0] != '\0' && !qr.setText(url)) {
         Log::instance()->error("Error encoding IP to QR code\n");
     }
 };
 
-void changeMode(draw_mode newMode) {
+bool changeMode(draw_mode newMode) {
     if (newMode == drawMode) {
-        return;
+        return false;
+    }
+
+    if (currentMode != nullptr) {
+        currentMode->close();
+    }
+
+    switch (newMode) {
+        case DRAW_MODE_LIFE:
+            currentMode = &life;
+            break;
+        case DRAW_MODE_QR:
+            currentMode = &qr;
+            break;
+        case DRAW_MODE_IMAGE:
+            currentMode = &media;
+            break;
+        case DRAW_MODE_MAP:
+            currentMode = &mapp;
+            break;
+
+        default:
+            currentMode = nullptr;
+            break;
+    }
+
+    if (currentMode != nullptr) {
+        currentMode->open();
     }
 
     drawMode = newMode;
     Log::instance()->info("Changed mode to %d\n", drawMode);
     display->clearScreen();
+
     if (newMode == DRAW_MODE_QR) {
         updateQrText();
     }
+
+    return true;
 };
 
-void updateConfig(JsonDocument newConfig) {
-    if (newConfig["wifi"]["ssid"].as<String>() != conf.current["wifi"]["ssid"].as<String>() || newConfig["wifi"]["password"].as<String>() != conf.current["wifi"]["password"].as<String>()) {
+void updateConfig(JsonDocument& newConfig) {
+    const char* newSsid = newConfig["wifi"]["ssid"].as<const char*>();
+    const char* newPassword = newConfig["wifi"]["password"].as<const char*>();
+    const char* currentSsid = conf.current["wifi"]["ssid"].as<const char*>();
+    const char* currentPassword = conf.current["wifi"]["password"].as<const char*>();
+
+    if (strcmp(newSsid, currentSsid) != 0 || strcmp(newPassword, currentPassword) != 0) {
         Log::instance()->info("WiFi configuration changed, reconnecting\n");
-        wifi.connect(newConfig["wifi"]["ssid"].as<String>(), newConfig["wifi"]["password"].as<String>());
+        wifi.connect(newSsid, newPassword);
     }
     if (newConfig["panel"]["brightness"].as<uint8_t>() != conf.current["panel"]["brightness"].as<uint8_t>()) {
         Log::instance()->info("Panel brightness changed: %d\n", newConfig["panel"]["brightness"].as<uint8_t>());
@@ -58,8 +95,10 @@ void updateConfig(JsonDocument newConfig) {
     }
     if (newConfig["log"]["level"].as<uint8_t>() != conf.current["log"]["level"].as<uint8_t>()) {
         Log::instance()->setLevel(newConfig["log"]["level"].as<log_level>());
-        Log::instance()->info("Log level changed: %s\n", Log::instance()->stringLevel());
+        Log::instance()->info("Log level changed: %s\n", Log::instance()->stringLevel().c_str());
     }
+
+    mapp.setConfig(newConfig["map"].as<JsonVariantConst>());
 };
 
 void setup() {
@@ -91,7 +130,7 @@ void setup() {
     }
 
     // Initialize WiFi
-    if (!wifi.connect(conf.current["wifi"]["ssid"].as<String>(), conf.current["wifi"]["password"].as<String>())) {
+    if (!wifi.connect(conf.current["wifi"]["ssid"].as<const char*>(), conf.current["wifi"]["password"].as<const char*>())) {
         return;
     }
     updateQrText();
@@ -103,8 +142,9 @@ void setup() {
     ota.initServer(&server);
 
     // Initialize modules
-    image.initServer(&server);
-    image.loadMedia();
+    media.initServer(&server);
+    mapp.initServer(&server);
+    mapp.setConfig(conf.current["map"].as<JsonVariantConst>());
     life.setFPS(FPS);
     conf.initServer(&server);
 
@@ -138,6 +178,7 @@ void setup() {
     server.serveStatic("/", LittleFS, "/www/").setDefaultFile("index.html");
 
     server.begin();
+    // Filesystem::tree("/", 0);
 };
 
 ulong lastModePoll = 0;
@@ -147,19 +188,12 @@ void loop() {
 
     if (lastModePoll + 1000 < millis()) {
         lastModePoll = millis();
-        changeMode(selector.getMode());
+        if (changeMode(selector.getMode())) {
+            return;
+        }
     }
-    switch (drawMode) {
-        case DRAW_MODE_LIFE:
-            life.render(display);
-            break;
 
-        case DRAW_MODE_IMAGE:
-            image.render(display);
-            break;
-
-        case DRAW_MODE_QR:
-            qr.render(display);
-            break;
+    if (currentMode != nullptr) {
+        currentMode->render(display);
     }
 };

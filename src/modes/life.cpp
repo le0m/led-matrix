@@ -3,13 +3,36 @@
 Life::Life(uint8_t w, uint8_t h) {
     width = w;
     height = h;
-    size = width * height * sizeof(Cell);
-    world = (Cell*)malloc(size);
 };
 
 Life::~Life() {
-    free(world);
+    close();
 };
+
+bool Life::open() {
+    if (isOpen) {
+        return true;
+    }
+
+    world = (Cell*)malloc(width * height * sizeof(Cell));
+    generation = 0;
+    isOpen = true;
+
+    return true;
+}
+
+bool Life::close() {
+    if (!isOpen) {
+        return true;
+    }
+
+    isOpen = false;
+    delay(50); // wait for possible render() execution to finish
+    free(world);
+    generation = 0;
+
+    return true;
+}
 
 void Life::setFPS(uint8_t f) {
     fps = f;
@@ -49,11 +72,12 @@ void Life::print() {
 void Life::initServer(AsyncWebServer* server) {};
 
 void Life::render(MatrixPanel_I2S_DMA* display) {
+    if (!isOpen || millis() - lastRender < 1000 / fps) {
+        return;
+    }
+
     if (generation == 0) {
         populate();
-    }
-    if (millis() - lastRender < 1000 / fps) {
-        return;
     }
 
     lastRender = millis();

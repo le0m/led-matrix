@@ -1,20 +1,20 @@
 #ifndef _CONFIG_H
 #define _CONFIG_H
 
-#include "log.h"
+#include "../modules/log.h"
 #include "filesystem.h"
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncJson.h>
 
-typedef std::function<void(JsonDocument cfg)> ConfigChangeHandler;
+typedef std::function<void(JsonDocument& cfg)> ConfigChangeHandler;
 
 class Config {
     private:
         JsonDocument newCfg;
         ConfigChangeHandler configChangeHandler;
         static void merge(JsonVariant, JsonVariantConst);
-        static void taskRunner(void*);
+        static void asyncUpdateConfig(void*);
 
     public:
         JsonDocument current;

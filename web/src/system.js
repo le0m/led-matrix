@@ -1,4 +1,4 @@
-import { humanFileSize } from "./utils";
+import { humanFileSize, setProgress } from './utils';
 
 /**
  * @typedef SystemStatus
@@ -10,7 +10,6 @@ import { humanFileSize } from "./utils";
  * @property {string} sdk
  */
 
-let pullTimer = undefined;
 const hwMsg = document.getElementById('hardware-message');
 const swMsg = document.getElementById('software-message');
 const heap = document.getElementById('heap-perc');
@@ -19,53 +18,42 @@ const fw = document.getElementById('firmware-perc');
 const heapInfo = document.getElementById('heap-info');
 const fsInfo = document.getElementById('fs-info');
 const fwInfo = document.getElementById('fw-info');
+const refreshButton = document.getElementById('refresh-resources');
 
 /**
- * Get current status.
+ * Update current status.
  *
- * @param {string} baseUrl API URL
- * @returns {Promise<SystemStatus>}
+ * @param {import('./state.js').State} state
  */
-const getStatus = async (baseUrl) => {
-    const url = new URL('status', baseUrl);
-    const res = await fetch(url)
-    if (!res.ok || res.status != 200) {
-        throw new Error(`Error getting current status, status code ${res.status}: ${await res.text()}`);
-    }
+const updateStatus = async (state) => {
+	const status = await state.status(true);
+	if (!status) {
+		return;
+	}
 
-    return await res.json();
+	// Update hardware/software info
+	hwMsg.innerText = `Running on a ${status.chip.model} (rev. ${status.chip.revision}) with ${status.chip.cores} CPU clocking at ${status.chip.clock} MHz`;
+	swMsg.innerText = `Firmware version ${status.firmware.version}, SDK version ${status.sdk}`;
+
+	// Update resources usage
+	const heapPerc = (100 * (status.heap.size - status.heap.free)) / status.heap.size;
+	const fsPerc = (100 * status.filesystem.used) / status.filesystem.size;
+	const fwPerc = (100 * status.firmware.used) / status.firmware.size;
+	setProgress(heap, heapPerc);
+	setProgress(fs, fsPerc);
+	setProgress(fw, fwPerc);
+	heapInfo.innerText = `(${humanFileSize(status.heap.size - status.heap.free)} / ${humanFileSize(status.heap.size)})`;
+	fsInfo.innerText = `(${humanFileSize(status.filesystem.used)} / ${humanFileSize(status.filesystem.size)})`;
+	fwInfo.innerText = `(${humanFileSize(status.firmware.used)} / ${humanFileSize(status.firmware.size)})`;
 };
 
-const setProgress = (elem, progress) => {
-    elem.value = progress;
-    ['success', 'warning', 'error', 'pattern'].forEach((c) => elem.classList.remove(`is-${c}`));
-    if (progress <= 50) {
-        elem.classList.add('is-success');
-    } else if (progress <= 75) {
-        elem.classList.add('is-warning');
-    } else {
-        elem.classList.add('is-error');
-    }
+/**
+ * Initialize system module.
+ *
+ * @param {import('./state.js').State} state
+ */
+export const system = (state) => {
+	updateStatus(state);
+
+	refreshButton.addEventListener('click', () => updateStatus(state));
 };
-
-const loop = async (baseUrl) => {
-    const status = await getStatus(baseUrl);
-
-    // Update hardware/software info
-    hwMsg.innerText = `Running on a ${status.chip.model} (rev. ${status.chip.revision}) with ${status.chip.cores} CPU clocking at ${status.chip.clock} MHz`;
-    swMsg.innerText = `Firmware version ${status.firmware.version}, SDK version ${status.sdk}`;
-
-    // Update resources usage
-    const heapPerc = 100 * (status.heap.size - status.heap.free) / status.heap.size;
-    const fsPerc = 100 * status.filesystem.used / status.filesystem.size;
-    const fwPerc = 100 * status.firmware.used / status.firmware.size;
-    setProgress(heap, heapPerc);
-    setProgress(fs, fsPerc);
-    setProgress(fw, fwPerc);
-    heapInfo.innerText = `(${humanFileSize(status.heap.size - status.heap.free)} / ${humanFileSize(status.heap.size)})`;
-    fsInfo.innerText = `(${humanFileSize(status.filesystem.used)} / ${humanFileSize(status.filesystem.size)})`;
-    fwInfo.innerText = `(${humanFileSize(status.firmware.used)} / ${humanFileSize(status.firmware.size)})`;
-};
-
-export const system = (baseUrl) =>
-    loop(baseUrl).then(() => pullTimer = setTimeout(() => loop(baseUrl), 60_000));

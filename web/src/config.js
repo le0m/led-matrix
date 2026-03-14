@@ -1,4 +1,4 @@
-import { resetMessage, setDisabled, showMessage } from './utils.js';
+import { resetMessage, setDisabled, showMessage, handleFetch } from './utils.js';
 
 let hidePwd = true;
 const submitWifi = document.getElementById('submit-wifi');
@@ -19,84 +19,71 @@ const pwdToggle = document.getElementById('toggle-password');
 const brightnessInput = document.getElementById('brightness');
 const logSelect = document.getElementById('log-level');
 
-export const config = (baseUrl) => {
-    // Get current config
-    const url = new URL('config', baseUrl);
-    fetch(url, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' },
-    }).then(async (res) => {
-        const data = await res.text();
-        if (!res.ok || res.status != 200) {
-            console.error(`Error receiving configuration, status code ${res.status}: ${data}`);
+/**
+ * Initialize config module.
+ *
+ * @param {import('./state.js').State} state
+ */
+export const config = (state) => {
+	// Get current config
+	state.config().then((config) => {
+		if (!config) {
+			return;
+		}
 
-            return;
-        }
+		ssidInput.value = config.wifi.ssid;
+		pwdInput.value = config.wifi.password;
+		brightnessInput.value = config.panel.brightness || 127;
+		logSelect.value = config.log.level || 2; // info
+	});
 
-        const json = JSON.parse(data);
-        ssidInput.value = json?.wifi?.ssid;
-        pwdInput.value = json?.wifi?.password;
-        brightnessInput.value = json?.panel?.brightness || 127;
-        logSelect.value = json?.log?.level || 2; // info
-    });
+	// Handle password toggle
+	pwdToggle.addEventListener('click', () => {
+		hidePwd = !hidePwd;
+		pwdToggle.innerText = hidePwd ? 'show' : 'hide';
+		pwdInput.type = hidePwd ? 'password' : 'text';
+	});
 
-    // Handle password toggle
-    pwdToggle.addEventListener('click', () => {
-        hidePwd = !hidePwd;
-        pwdToggle.innerText = hidePwd ? 'show' : 'hide';
-        pwdInput.type = hidePwd ? 'password' : 'text';
-    });
+	// Enable submit on value changes
+	const handleInput = (inputElem, submitElem, feedbackElem) => {
+		inputElem.addEventListener('input', () => {
+			resetMessage(feedbackElem);
+			setDisabled(submitElem, false);
+		});
+	};
+	handleInput(ssidInput, submitWifi, feedbackWifiMessage);
+	handleInput(pwdInput, submitWifi, feedbackWifiMessage);
+	handleInput(brightnessInput, submitBrightness, feedbackBrightnessMessage);
+	handleInput(logSelect, submitLog, feedbackLogMessage);
 
-    // Enable submit on value changes
-    const handleInput = (inputElem, submitElem, feedbackElem) => {
-        inputElem.addEventListener('input', () => {
-            resetMessage(feedbackElem);
-            setDisabled(submitElem, false);
-        });
-    };
-    handleInput(ssidInput, submitWifi, feedbackWifiMessage);
-    handleInput(pwdInput, submitWifi, feedbackWifiMessage);
-    handleInput(brightnessInput, submitBrightness, feedbackBrightnessMessage);
-    handleInput(logSelect, submitLog, feedbackLogMessage);
+	// Handle submit to server
+	const handleSubmit = (submitElem, feedbackElem) => {
+		submitElem.addEventListener('click', async () => {
+			setDisabled(submitElem, true);
+			showMessage(feedbackElem, 'Saving...', 'is-primary');
+			const res = await state.saveConfig({
+				wifi: {
+					ssid: ssidInput.value,
+					password: pwdInput.value,
+				},
+				panel: {
+					brightness: Math.min(255, Math.max(0, brightnessInput.value)),
+				},
+				log: {
+					level: parseInt(logSelect.value, 10),
+				},
+			});
+			if (!res) {
+				showMessage(feedbackElem, 'Error saving configuration', 'is-error');
+				setDisabled(submitElem, false);
 
-    // Handle submit to server
-    const handleSubmit = (submitElem, feedbackElem) => {
-        submitElem.addEventListener('click', async () => {
-            setDisabled(submitElem, true);
-            showMessage(feedbackElem, 'Saving...', 'is-primary');
-            const config = {
-                wifi: {
-                    ssid: ssidInput.value,
-                    password: pwdInput.value,
-                },
-                panel: {
-                    brightness: Math.min(255, Math.max(0, brightnessInput.value)),
-                },
-                log: {
-                    level: parseInt(logSelect.value, 10)
-                }
-            };
+				return;
+			}
 
-            try {
-                const url = new URL('config', baseUrl);
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(config),
-                });
-                if (!response.ok || response.status != 204) {
-                    throw new Error(`status code ${response.status}: ${await response.text()}`);
-                }
-
-                showMessage(feedbackElem, 'Configuration saved', 'is-success');
-            } catch (e) {
-                console.error('Error sending configuration:', e);
-                showMessage(feedbackElem, 'Error saving configuration', 'is-error');
-                setDisabled(submitElem, false);
-            }
-        });
-    };
-    handleSubmit(submitWifi, feedbackWifiMessage);
-    handleSubmit(submitBrightness, feedbackBrightnessMessage);
-    handleSubmit(submitLog, feedbackLogMessage);
+			showMessage(feedbackElem, 'Configuration saved', 'is-success');
+		});
+	};
+	handleSubmit(submitWifi, feedbackWifiMessage);
+	handleSubmit(submitBrightness, feedbackBrightnessMessage);
+	handleSubmit(submitLog, feedbackLogMessage);
 };

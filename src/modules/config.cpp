@@ -10,47 +10,45 @@ Config::~Config() {
 };
 
 bool Config::save(const char *path) {
-    return writeConfig(path, current);
+    return Filesystem::writeConfig(path, current);
 };
 
 bool Config::load(const char *path) {
-    current = readConfig(path);
+    current = Filesystem::readConfig(path);
 
     return !current.isNull();
 };
 
-// Asynchronously update configuration
-void Config::taskRunner(void *p) {
+void Config::asyncUpdateConfig(void *p) {
     Config *t = (Config*) p;
+    // Merge new config with current for partial updates
+    JsonDocument merged;
+    merged.set(t->current);
+    Config::merge(merged.as<JsonVariant>(), t->newCfg.as<JsonVariantConst>());
     if (t->configChangeHandler) {
-        t->configChangeHandler(t->newCfg);
+        t->configChangeHandler(merged);
     }
 
-    t->current.clear();
-    Config::merge(t->current, t->newCfg);
     t->newCfg.clear();
+    t->current.clear();
+    t->current.set(merged);
     t->save();
-
     vTaskDelete(NULL);
 };
 
 void Config::merge(JsonVariant dst, JsonVariantConst src) {
-    if (src.is<JsonObjectConst>()) {
-        for (JsonPairConst kvp : src.as<JsonObjectConst>()) {
-            if (dst[kvp.key()]) {
-                Config::merge(dst[kvp.key()], kvp.value());
-
-                return;
-            }
-
-            dst[kvp.key()] = kvp.value();
-        }
+    if (!src.is<JsonObjectConst>()) {
+        dst.set(src);
 
         return;
     }
 
-    if (!src.isNull() && strcmp(src.as<const char*>(), "") != 0) {
-        dst.set(src);
+    for (JsonPairConst kvp : src.as<JsonObjectConst>()) {
+        if (dst[kvp.key()]) {
+            Config::merge(dst[kvp.key()], kvp.value());
+        } else {
+            dst[kvp.key()] = kvp.value();
+        }
     }
 };
 
@@ -63,7 +61,7 @@ void Config::initServer(AsyncWebServer *server) {
         request->send(response);
     });
     AsyncCallbackJsonWebHandler* handler = new AsyncCallbackJsonWebHandler("/config", [&](AsyncWebServerRequest *request, JsonVariant &json) {
-        if (request->methodToString() != "POST") {
+        if (strcasecmp(request->methodToString(), "POST") != 0) {
             request->send(405);
 
             return;
@@ -71,9 +69,8 @@ void Config::initServer(AsyncWebServer *server) {
 
         Log::instance()->info("Config JSON received\n");
         request->send(204);
-        JsonObject obj = json.as<JsonObject>();
-        newCfg.set(obj);
-        xTaskCreate(taskRunner, "Update config", 8192, this, 0, NULL);
+        newCfg.set(json);
+        xTaskCreate(asyncUpdateConfig, "Update config", 8192, this, 0, NULL);
     });
     server->addHandler(handler);
 };

@@ -15,7 +15,7 @@ typedef enum {
     DRAW_MODE_NONE  = 0,
     DRAW_MODE_IMAGE = 1,
     DRAW_MODE_LIFE  = 2,
-    DRAW_MODE_TBD   = 3, // TODO: the other orientation, TBD on what to do
+    DRAW_MODE_MAP   = 3,
     DRAW_MODE_QR    = 4,
 } draw_mode;
 
@@ -31,6 +31,7 @@ class ModeSelector {
         Quaternion q;           // [w, x, y, z]         quaternion container
         VectorFloat gravity;    // [x, y, z]            gravity vector
         float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll in radians
+        draw_mode previousRead = DRAW_MODE_NONE;
 
     public:
         ModeSelector();

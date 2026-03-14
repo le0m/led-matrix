@@ -8,7 +8,6 @@ class Renderer {
     protected:
         uint8_t width;
         uint8_t height;
-        uint16_t size;
 
     public:
         Renderer() : Renderer(0, 0) {};
@@ -17,6 +16,8 @@ class Renderer {
         virtual void initServer(AsyncWebServer*) = 0;
         virtual void render(MatrixPanel_I2S_DMA*) = 0;
         virtual void print() = 0;
+        virtual bool open() = 0;
+        virtual bool close() = 0;
 };
 
 #endif

@@ -1,14 +1,17 @@
 #include "wifi.h"
 
-WiFiController::WiFiController() {};
+WiFiController::WiFiController() {
+    urlBuffer[0] = '\0';
+    ipBuffer[0] = '\0';
+};
 
 WiFiController::~WiFiController() {};
 
-bool WiFiController::connect(String ssid, String password) {
+bool WiFiController::connect(const char* ssid, const char* password) {
     if (!disconnect()) {
         return false;
     }
-    if (ssid == "" || password == "") {
+    if (ssid[0] == '\0' || password[0] == '\0') {
         Log::instance()->info("Starting WiFi in AP mode\n");
 
         if (!WiFi.softAP(SETUP_AP_SSID, SETUP_AP_PASS)) {
@@ -22,7 +25,7 @@ bool WiFiController::connect(String ssid, String password) {
         return true;
     }
 
-    Log::instance()->info("Stating WiFi in STA mode\n");
+    Log::instance()->info("Starting WiFi in STA mode\n");
     if (!WiFi.mode(WIFI_STA)) {
         Log::instance()->error("Error setting STA mode\n");
 
@@ -30,7 +33,7 @@ bool WiFiController::connect(String ssid, String password) {
     }
 
     WiFi.setAutoReconnect(true);
-    WiFi.begin(ssid.c_str(), password.c_str());
+    WiFi.begin(ssid, password);
     Log::instance()->info("Connecting to WiFi\n");
     wl_status_t s;
     uint8_t t = 0;
@@ -71,35 +74,42 @@ bool WiFiController::disconnect() {
     return true;
 };
 
-String WiFiController::getIp() {
+const char* WiFiController::getIp() {
+    ipBuffer[0] = '\0';
+
     if (WiFi.getMode() & WIFI_MODE_AP) {
-        return WiFi.softAPIP().toString();
-    }
-    if (WiFi.getMode() & WIFI_MODE_STA) {
+        strncpy(ipBuffer, WiFi.softAPIP().toString().c_str(), MAX_IP_LENGTH);
+    } else if (WiFi.getMode() & WIFI_MODE_STA) {
         if (WiFi.status() != WL_CONNECTED) {
-            return String("");
+            Log::instance()->debug("Unable to get IP, WiFi not connected\n");
+
+            return ipBuffer;
         }
 
-        return WiFi.localIP().toString();
+        strncpy(ipBuffer, WiFi.localIP().toString().c_str(), MAX_IP_LENGTH);
+    } else {
+        Log::instance()->warning("No IP availble because not connected to a nerwork\n");
     }
 
-    Log::instance()->warning("No IP availble because not connected to a nerwork\n");
+    ipBuffer[MAX_IP_LENGTH - 1] = '\0';
 
-    return String("");
+    return ipBuffer;
 };
 
 wifi_mode_t WiFiController::getMode() {
     return WiFi.getMode();
 };
 
-String WiFiController::getUrl() {
-    String ip = getIp();
-    if (ip == "") {
-        return ip;
+const char* WiFiController::getUrl() {
+    const char* ip = getIp();
+
+    if (ip[0] == '\0') {
+        urlBuffer[0] = '\0';
+
+        return urlBuffer;
     }
 
-    String url = "http://";
-    url.concat(ip);
+    snprintf(urlBuffer, MAX_URL_LENGTH, "http://%s/", ip);
 
-    return url;
+    return urlBuffer;
 };
