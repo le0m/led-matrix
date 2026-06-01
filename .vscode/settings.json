@@ -48,6 +48,5 @@
 	"[json]": {
 		"editor.defaultFormatter": "esbenp.prettier-vscode"
 	},
-    "typescript.suggest.completeFunctionCalls": true,
-    "javascript.suggest.completeFunctionCalls": true
+    "js/ts.suggest.completeFunctionCalls": true
 }
