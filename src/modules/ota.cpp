@@ -16,22 +16,22 @@ void OTA::initServer(AsyncWebServer* server) {
         }
 
         uint8_t mode = U_FLASH;
-        const char* modeParam = request->getParam("mode")->value().c_str();
-        if (strcasecmp(modeParam, "filesystem") == 0) {
+        const String& modeParam = request->getParam("mode")->value();
+        if (modeParam.equalsIgnoreCase("filesystem")) {
             mode = U_SPIFFS;
-        } else if (strcasecmp(modeParam, "firmware") == 0) {
+        } else if (modeParam.equalsIgnoreCase("firmware")) {
             mode = U_FLASH;
         } else {
-            Log::instance()->error("Unknown update mode %s\n", modeParam);
+            Log::instance()->error("Unknown update mode %s\n", modeParam.c_str());
             request->send(400, "text/plain", "unknown mode");
 
             return;
         }
 
         if (request->hasParam("md5")) {
-            const char* hash = request->getParam("md5")->value().c_str();
-            Log::instance()->info("Setting MD5 hash: %s\n", hash);
-            if (!Update.setMD5(hash)) {
+            const String& hash = request->getParam("md5")->value();
+            Log::instance()->info("Setting MD5 hash: %s\n", hash.c_str());
+            if (!Update.setMD5(hash.c_str())) {
                 Log::instance()->error("Error setting MD5 update hash\n");
                 request->send(500, "text/plain", "error setting MD5 hash");
 
@@ -47,9 +47,8 @@ void OTA::initServer(AsyncWebServer* server) {
 
         }
 
-        size_t size = UPDATE_SIZE_UNKNOWN;
-        const char* sizeParam = request->getParam("size")->value().c_str();
-        sscanf(sizeParam, "%zu", &size); // string to size_t
+        const String& sizeParam = request->getParam("size")->value();
+        size_t size = (size_t)sizeParam.toInt();
         if (!Update.begin(size, mode) || Update.hasError()) {
             Log::instance()->error("Error starting update: %s\n", Update.errorString());
             request->send(500, "text/plain", "error starting update");

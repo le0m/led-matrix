@@ -19,7 +19,7 @@ class Media : public Renderer {
             MEDIA_TYPE_IMAGE = 1,
             MEDIA_TYPE_GIF   = 2,
         } media_type;
-        Decoder *current;
+        Decoder *current = nullptr;
         media_type mediaType = MEDIA_TYPE_NONE;
         bool checkSize(AsyncWebServerRequest*, size_t);
 

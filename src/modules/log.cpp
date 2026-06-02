@@ -13,10 +13,10 @@ Log::Log(log_level l) : level(l) {};
 Log::~Log() {
     if (websocket != nullptr) {
         websocket->closeAll();
-        free(websocket);
+        delete websocket;
     }
     if (handler != nullptr) {
-        free(handler);
+        delete handler;
     }
 };
 
@@ -93,12 +93,14 @@ void Log::broadcast(std::string message) {
 };
 
 std::string Log::format(const char *fmt, va_list args) {
-    std::vector<char> msg;
-    int len = vsnprintf(&msg[0], 0, fmt, args);
-    msg.resize(len + 1);
-    vsnprintf(&msg[0], len, fmt, args);
+    va_list copy;
+    va_copy(copy, args);
+    int len = vsnprintf(nullptr, 0, fmt, copy);
+    va_end(copy);
+    std::vector<char> msg(len + 1);
+    vsnprintf(msg.data(), len + 1, fmt, args);
 
-    return std::string(&msg[0]);
+    return std::string(msg.data());
 };
 
 void Log::error(const char *fmt, ...) {

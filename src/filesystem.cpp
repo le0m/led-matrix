@@ -34,7 +34,7 @@ void Filesystem::tree(const char *path, uint8_t depth) {
 
 // see readme "Note on PlatformIO"
 bool Filesystem::pathExists(const char *path) {
-    static struct stat pathStat;
+    struct stat pathStat;
     char fullPath[64];
     snprintf(fullPath, sizeof(fullPath), "/littlefs%s", path);
 

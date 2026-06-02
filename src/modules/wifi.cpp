@@ -78,7 +78,7 @@ const char* WiFiController::getIp() {
     ipBuffer[0] = '\0';
 
     if (WiFi.getMode() & WIFI_MODE_AP) {
-        strncpy(ipBuffer, WiFi.softAPIP().toString().c_str(), MAX_IP_LENGTH);
+        snprintf(ipBuffer, sizeof(ipBuffer), "%s", WiFi.softAPIP().toString().c_str());
     } else if (WiFi.getMode() & WIFI_MODE_STA) {
         if (WiFi.status() != WL_CONNECTED) {
             Log::instance()->debug("Unable to get IP, WiFi not connected\n");
@@ -86,12 +86,10 @@ const char* WiFiController::getIp() {
             return ipBuffer;
         }
 
-        strncpy(ipBuffer, WiFi.localIP().toString().c_str(), MAX_IP_LENGTH);
+        snprintf(ipBuffer, sizeof(ipBuffer), "%s", WiFi.localIP().toString().c_str());
     } else {
         Log::instance()->warning("No IP availble because not connected to a nerwork\n");
     }
-
-    ipBuffer[MAX_IP_LENGTH - 1] = '\0';
 
     return ipBuffer;
 };

@@ -145,7 +145,12 @@ void Media::initServer(AsyncWebServer *server) {
             if (index == 0) {
                 Log::instance()->debug("Receiving file: %d bytes\n", total);
                 const AsyncWebHeader *contentType = request->getHeader("Content-Type");
+                if (contentType == nullptr) {
+                    Log::instance()->error("Uploaded file has no content-type header");
+                    request->send(400, "text/plain", "no content-type header");
 
+                    return;
+                }
                 if (contentType->value() != "image/jpeg" && contentType->value() != "image/gif") {
                     Log::instance()->error("Uploaded file has unhandled content-type: %s\n", contentType->value());
                     request->send(400, "text/plain", "unhandled content type");
