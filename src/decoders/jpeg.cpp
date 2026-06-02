@@ -66,13 +66,15 @@ void DecoderJPEG::renderFrame(MatrixPanel_I2S_DMA  *display) {
 };
 
 void* DecoderJPEG::openFile(const char *path, int32_t *size) {
-    File *file = new File();
-    *file = LittleFS.open(path);
-    if (file) {
-        *size = file->size();
+    File *f = new File();
+    *f = LittleFS.open(path);
+    if (*f) {
+        *size = f->size();
 
-        return static_cast<void*>(file);
+        return static_cast<void*>(f);
     }
+
+    delete f;
 
     return NULL;
 };
@@ -81,6 +83,7 @@ void DecoderJPEG::closeFile(void *pHandle) {
     File *f = static_cast<File *>(pHandle);
     if (f != NULL) {
         f->close();
+        delete f;
     }
 };
 

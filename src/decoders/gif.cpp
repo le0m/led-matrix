@@ -74,13 +74,15 @@ void DecoderGIF::renderFrame(MatrixPanel_I2S_DMA  *display) {
 };
 
 void* DecoderGIF::openFile(const char *fname, int32_t *pSize) {
-    File *file = new File();
-    *file = LittleFS.open(fname);
-    if (file) {
-        *pSize = file->size();
+    File *f = new File();
+    *f = LittleFS.open(fname);
+    if (*f) {
+        *pSize = f->size();
 
-        return static_cast<void*>(file);
+        return static_cast<void*>(f);
     }
+
+    delete f;
 
     return NULL;
 };
@@ -89,6 +91,7 @@ void DecoderGIF::closeFile(void *pHandle) {
     File *f = static_cast<File *>(pHandle);
     if (f != NULL) {
         f->close();
+        delete f;
     }
 };
 
