@@ -14,7 +14,13 @@ bool Life::open() {
         return true;
     }
 
-    world = (Cell*)malloc(width * height * sizeof(Cell));
+    world = (Cell*)calloc(width * height, sizeof(Cell));
+    if (world == nullptr) {
+        Log::instance()->error("Error allocating world\n");
+
+        return false;
+    }
+
     generation = 0;
     isOpen = true;
 
@@ -29,6 +35,7 @@ bool Life::close() {
     isOpen = false;
     delay(50); // wait for possible render() execution to finish
     free(world);
+    world = nullptr;
     generation = 0;
 
     return true;
