@@ -1,2 +1,21 @@
-i2c library for MPU6050 from Rowberg: https://github.com/jrowberg/i2cdevlib
-qrcodegen from: https://github.com/nayuki/QR-Code-generator
+# External libraries
+
+## qrcodegen
+
+Source: https://github.com/nayuki/QR-Code-generator
+
+The `qrcodegen/` folder is a wrapper for the library, to include the c sources from `qrcodegen-src/c`.
+I didn't use PlatformIO's config `lib_extra_dirs` because it builds all files in the folder.
+Had to use `lib_ignore` because it was including `qrcodegen-src` which has no header files.
+
+Initialize submodule:
+```shell
+git submodule update --init
+```
+
+Update qrcodegen to a new release:
+```shell
+git -C lib/qrcodegen-src checkout <new-tag>
+git add lib/qrcodegen-src
+git commit -m "chore: update qrcodegen to <new-tag>"
+```
