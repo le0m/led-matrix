@@ -37,6 +37,13 @@ bool QRCode::setText(const char* str) {
         return false;
     }
 
+    int size = qrcodegen_getSize(qr0);
+    if (size + QR_BORDER_PX * 2 > width || size + QR_BORDER_PX * 2 > height) {
+        Log::instance()->error("QR code too large for panel: %d (border %d)\n", size, QR_BORDER_PX);
+
+        return false;
+    }
+
     strncpy(text, str, QR_TEXT_MAX_LENGTH - 1);
     text[QR_TEXT_MAX_LENGTH - 1] = '\0';
     changed = true;
@@ -52,8 +59,8 @@ void QRCode::render(MatrixPanel_I2S_DMA* display) {
     }
 
     int size = qrcodegen_getSize(qr0);
-    uint8_t startX = (width - size) / 2;
-    uint8_t startY = (height - size) / 2;
+    int startX = (width - size) / 2;
+    int startY = (height - size) / 2;
     display->fillRect(startX - QR_BORDER_PX, startY - QR_BORDER_PX, size + QR_BORDER_PX * 2, size + QR_BORDER_PX * 2, display->color565(255, 255, 255));
     for (uint8_t y = 0; y < size; y++) {
         for (uint8_t x = 0; x < size; x++) {
