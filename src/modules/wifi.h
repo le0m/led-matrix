@@ -13,7 +13,7 @@
 class WiFiController {
     private:
         char urlBuffer[MAX_URL_LENGTH];
-        char ipBuffer[MAX_IP_LENGTH];
+        char ipBuffer[MAX_IP_LENGTH + 1];
 
     public:
         WiFiController();
