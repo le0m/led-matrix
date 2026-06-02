@@ -37,14 +37,8 @@ void Config::asyncUpdateConfig(void *p) {
 };
 
 void Config::merge(JsonVariant dst, JsonVariantConst src) {
-    if (!src.is<JsonObjectConst>()) {
-        dst.set(src);
-
-        return;
-    }
-
     for (JsonPairConst kvp : src.as<JsonObjectConst>()) {
-        if (dst[kvp.key()]) {
+        if (kvp.value().is<JsonObjectConst>()) {
             Config::merge(dst[kvp.key()], kvp.value());
         } else {
             dst[kvp.key()] = kvp.value();
@@ -70,7 +64,7 @@ void Config::initServer(AsyncWebServer *server) {
         Log::instance()->info("Config JSON received\n");
         request->send(204);
         newCfg.set(json);
-        xTaskCreate(asyncUpdateConfig, "Update config", 8192, this, 0, NULL);
+        xTaskCreate(asyncUpdateConfig, "Update config", 16384, this, 0, NULL);
     });
     server->addHandler(handler);
 };
