@@ -16,6 +16,7 @@ HUB75_I2S_CFG ledConfig(
 );
 MatrixPanel_I2S_DMA *display = nullptr;
 
+bool setupOk = false;
 OTA ota(1000);
 draw_mode drawMode = DRAW_MODE_NONE;
 WiFiController wifi;
@@ -30,6 +31,12 @@ Renderer *currentMode = nullptr;
 
 void updateQrText() {
     const char* url = wifi.getUrl();
+    if (url == nullptr) {
+        Log::instance()->error("Error getting URL for QR code\n");
+
+        return;
+    }
+
     Log::instance()->info("QR code URL: %s\n", url);
     if (url[0] != '\0' && !qr.setText(url)) {
         Log::instance()->error("Error encoding IP to QR code\n");
@@ -70,7 +77,9 @@ bool changeMode(draw_mode newMode) {
 
     drawMode = newMode;
     Log::instance()->info("Changed mode to %d\n", drawMode);
-    display->clearScreen();
+    if (display != nullptr) {
+        display->clearScreen();
+    }
 
     if (newMode == DRAW_MODE_QR) {
         updateQrText();
@@ -80,16 +89,16 @@ bool changeMode(draw_mode newMode) {
 };
 
 void updateConfig(JsonDocument& newConfig) {
-    const char* newSsid = newConfig["wifi"]["ssid"].as<const char*>();
-    const char* newPassword = newConfig["wifi"]["password"].as<const char*>();
-    const char* currentSsid = conf.current["wifi"]["ssid"].as<const char*>();
-    const char* currentPassword = conf.current["wifi"]["password"].as<const char*>();
+    String newSsid = newConfig["wifi"]["ssid"].as<String>();
+    String newPassword = newConfig["wifi"]["password"].as<String>();
+    String currentSsid = conf.current["wifi"]["ssid"].as<String>();
+    String currentPassword = conf.current["wifi"]["password"].as<String>();
 
-    if (strcmp(newSsid, currentSsid) != 0 || strcmp(newPassword, currentPassword) != 0) {
+    if (!newSsid.equals(currentSsid) || !newPassword.equals(currentPassword)) {
         Log::instance()->info("WiFi configuration changed, reconnecting\n");
-        wifi.connect(newSsid, newPassword);
+        wifi.connect(newSsid.c_str(), newPassword.c_str());
     }
-    if (newConfig["panel"]["brightness"].as<uint8_t>() != conf.current["panel"]["brightness"].as<uint8_t>()) {
+    if (display != nullptr && newConfig["panel"]["brightness"].as<uint8_t>() != conf.current["panel"]["brightness"].as<uint8_t>()) {
         Log::instance()->info("Panel brightness changed: %d\n", newConfig["panel"]["brightness"].as<uint8_t>());
         display->setBrightness(newConfig["panel"]["brightness"].as<uint8_t>());
     }
@@ -122,6 +131,11 @@ void setup() {
 
     // Initialize LED matrix
     display = setupLED(ledConfig);
+    if (display == nullptr) {
+        Log::instance()->error("Error setting up LED matrix\n");
+
+        return;
+    }
     display->setBrightness(conf.current["panel"]["brightness"].as<uint8_t>());
 
     // Initialize gyroscope
@@ -130,9 +144,12 @@ void setup() {
     }
 
     // Initialize WiFi
-    if (!wifi.connect(conf.current["wifi"]["ssid"].as<const char*>(), conf.current["wifi"]["password"].as<const char*>())) {
+    String ssid = conf.current["wifi"]["ssid"].as<String>();
+    String password = conf.current["wifi"]["password"].as<String>();
+    if (!wifi.connect(ssid.c_str(), password.c_str())) {
         return;
     }
+
     updateQrText();
 
     // Initialize log WebSocket
@@ -179,14 +196,19 @@ void setup() {
 
     server.begin();
     // Filesystem::tree("/", 0);
+    setupOk = true;
 };
 
 ulong lastModePoll = 0;
 
 void loop() {
+    if (!setupOk) {
+        return;
+    }
+
     ota.loop();
 
-    if (lastModePoll + 1000 < millis()) {
+    if (millis() - lastModePoll >= 1000) {
         lastModePoll = millis();
         if (changeMode(selector.getMode())) {
             return;
