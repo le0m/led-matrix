@@ -83,6 +83,12 @@ void Map::initServer(AsyncWebServer *server) {
         [&](AsyncWebServerRequest *request) {
             Log::instance()->info("Map received\n");
             const AsyncWebHeader *contentType = request->getHeader("Content-Type");
+            if (contentType == nullptr) {
+                Log::instance()->error("Uploaded map has no content-type header");
+                request->send(400, "text/plain", "no content-type header");
+
+                return;
+            }
             if (contentType->value() != "image/jpeg") {
                 Log::instance()->error("Uploaded map has unhandled content-type: %s\n", contentType->value());
                 request->send(400, "text/plain", "unhandled content type");
@@ -97,6 +103,12 @@ void Map::initServer(AsyncWebServer *server) {
         nullptr,
         [&](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
             const AsyncWebHeader *contentType = request->getHeader("Content-Type");
+            if (contentType == nullptr) {
+                Log::instance()->error("Uploaded map has no content-type header");
+                request->send(400, "text/plain", "no content-type header");
+
+                return;
+            }
             if (contentType->value() != "image/jpeg") {
                 Log::instance()->error("Uploaded map has unhandled content-type: %s\n", contentType->value());
                 request->send(400, "text/plain", "unhandled content type");
@@ -218,52 +230,47 @@ std::array<double, 2> Map::getPositionFromAPI() {
     http.setReuse(false);
     http.setConnectTimeout(10000);
     http.setTimeout(60000);
-    const char *u = config["url"].as<const char*>();
-    const char *m = config["method"].as<const char*>();
-    const char *r = config["regex"].as<const char*>();
-    const char *b = config["body"].as<const char*>();
+    String u = config["url"].as<String>();
+    String m = config["method"].as<String>();
+    String r = config["regex"].as<String>();
+    String b = config["body"].as<String>();
 
-    if (u == nullptr || strcmp(u, "") == 0) {
+    if (u.isEmpty()) {
         Log::instance()->error("Position API URL is not set\n");
 
         return pos;
     }
-    if (r == nullptr || strcmp(r, "") == 0) {
+    if (r.isEmpty()) {
         Log::instance()->error("Position API regexp is not set\n");
 
         return pos;
     }
-    if (m == nullptr || strcmp(m, "") == 0) {
+    if (m.isEmpty()) {
         m = "GET";
     }
 
     // Apply query params for GET requests
-    if (strcasecmp(m, "GET") == 0 && b != nullptr && strcmp(b, "") != 0) {
-        char urlBuffer[128];
-
+    if (m.equalsIgnoreCase("GET") && !b.isEmpty()) {
         // Need a "/" after hostname, otherwise the query parameters end up in the DNS query
-        size_t urlLen = strlen(u);
-        if (u[urlLen - 1] == '/') {
-            snprintf(urlBuffer, sizeof(urlBuffer), "%s%s", u, b);
+        if (u.endsWith("/")) {
+            u += b;
         } else {
-            snprintf(urlBuffer, sizeof(urlBuffer), "%s/%s", u, b);
+            u += "/" + b;
         }
-
-        u = urlBuffer;
     }
 
-    http.begin(client, u);
+    http.begin(client, u.c_str());
 
     // Apply headers
-    const char *hs = config["headers"].as<const char*>();
-    if (hs != nullptr && strcmp(hs, "") != 0 && !setHeaders(http, hs)) {
+    String hs = config["headers"].as<String>();
+    if (!hs.isEmpty() && !setHeaders(http, hs.c_str())) {
         return pos;
     }
 
     // Send request
     int code;
-    if (strcasecmp(m, "POST") == 0) {
-        code = http.POST((b != nullptr && strcmp(b, "") != 0) ? b : "");
+    if (m.equalsIgnoreCase("POST")) {
+        code = http.POST(b);
     } else {
         code = http.GET();
     }
@@ -274,7 +281,8 @@ std::array<double, 2> Map::getPositionFromAPI() {
     }
 
     // Match regex
-    pos = matchRegex(http.getString().c_str(), r);
+    String resp = http.getString();
+    pos = matchRegex(resp.c_str(), r.c_str());
 
     return pos;
 };
@@ -282,21 +290,24 @@ std::array<double, 2> Map::getPositionFromAPI() {
 std::array<double, 2> Map::getPosition() {
     std::array<double, 2> pos = { 0, 0 };
     if (
-        strcmp(config["url"].as<const char*>(), "") != 0
-        && strcmp(config["method"].as<const char*>(), "") != 0
-        && strcmp(config["regex"].as<const char*>(), "") != 0
+        config["url"].as<String>() != ""
+        && config["method"].as<String>() != ""
+        && config["regex"].as<String>() != ""
     ) {
         pos = getPositionFromAPI();
-        Log::instance()->info("Position from API (%s): %f, %f\n", config["url"].as<const char*>(), pos[0], pos[1]);
+        String url = config["url"].as<String>();
+        Log::instance()->info("Position from API (%s): %f, %f\n", url.c_str(), pos[0], pos[1]);
     }
     // default to static position, if available
     if (
         pos[0] == 0 && pos[1] == 0
-        && strcmp(config["latitude"].as<const char*>(), "") != 0
-        && strcmp(config["longitude"].as<const char*>(), "") != 0
+        && config["latitude"].as<String>() != ""
+        && config["longitude"].as<String>() != ""
     ) {
-        pos[0] = strtod(config["latitude"].as<const char*>(), NULL);
-        pos[1] = strtod(config["longitude"].as<const char*>(), NULL);
+        String lat = config["latitude"].as<String>();
+        String lon = config["longitude"].as<String>();
+        pos[0] = strtod(lat.c_str(), NULL);
+        pos[1] = strtod(lon.c_str(), NULL);
         Log::instance()->info("Position from configuration: %f, %f\n", pos[0], pos[1]);
     }
 
@@ -379,13 +390,15 @@ void Map::render(MatrixPanel_I2S_DMA *display) {
 };
 
 void* Map::openFile(const char *path, int32_t *size) {
-    File *file = new File();
-    *file = LittleFS.open(path);
-    if (file) {
-        *size = file->size();
+    File *f = new File();
+    *f = LittleFS.open(path);
+    if (*f) {
+        *size = f->size();
 
-        return static_cast<void*>(file);
+        return static_cast<void*>(f);
     }
+
+    delete f;
 
     return NULL;
 };
@@ -394,6 +407,7 @@ void Map::closeFile(void *pHandle) {
     File *f = static_cast<File *>(pHandle);
     if (f != NULL) {
         f->close();
+        delete f;
     }
 };
 

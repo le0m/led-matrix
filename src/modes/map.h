@@ -18,7 +18,7 @@ class Map : public Renderer {
     private:
         typedef struct drawUserData {
             MatrixPanel_I2S_DMA *display;
-            uint16_t *position;
+            uint8_t *position;
             uint8_t size;
             uint16_t color;
             uint16_t track;
@@ -28,7 +28,7 @@ class Map : public Renderer {
         ulong lastRender = 0;
         ulong lastCropUpdate = 0;
         uint16_t cropArea[2];
-        uint16_t cropPosition[2];
+        uint8_t cropPosition[2];
         bool isUpdating = false;
         bool isOpen = false;
         JsonDocument config;
