@@ -364,7 +364,7 @@ void Map::render(MatrixPanel_I2S_DMA *display) {
     // Update crop area (and position) once every 15 minutes
     if (forceCropUpdate || millis() - lastCropUpdate > UPDATE_CROP_AREA) {
         isUpdating = true;
-        xTaskCreate(asyncUpdateCrop, "Update crop area", 8192, this, 0, NULL);
+        xTaskCreate(asyncUpdateCrop, "Update crop area", 8192, this, 1, NULL);
 
         return;
     }

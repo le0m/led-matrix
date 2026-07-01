@@ -64,7 +64,7 @@ void Config::initServer(AsyncWebServer *server) {
         Log::instance()->info("Config JSON received\n");
         request->send(204);
         newCfg.set(json);
-        xTaskCreate(asyncUpdateConfig, "Update config", 16384, this, 0, NULL);
+        xTaskCreate(asyncUpdateConfig, "Update config", 16384, this, 1, NULL);
     });
     server->addHandler(handler);
 };
