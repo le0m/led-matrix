@@ -14,10 +14,6 @@ typedef enum {
 class Log {
     private:
         log_level level = LOG_LEVEL_INFO;
-#ifdef LOG_QUEUE
-        std::vector<std::string> queue;
-        uint8_t queueSize = 50;
-#endif
         bool serverInitialized = false;
         AsyncWebSocketMessageHandler* handler = nullptr;
         AsyncWebSocket* websocket = nullptr;
@@ -27,15 +23,9 @@ class Log {
     public:
         Log();
         Log(log_level);
-#ifdef LOG_QUEUE
-        Log(log_level, uint8_t);
-#endif
         ~Log();
         static Log* instance();
         void setLevel(log_level);
-#ifdef LOG_QUEUE
-        void setQueueSize(uint8_t);
-#endif
         std::string stringLevel();
         void begin(unsigned long);
         void initServer(AsyncWebServer*);

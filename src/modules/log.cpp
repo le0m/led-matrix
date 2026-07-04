@@ -1,14 +1,7 @@
 #include "log.h"
 
-#ifdef LOG_QUEUE
-Log::Log(): level(LOG_LEVEL_INFO), queueSize(50) {};
-Log::Log(log_level l) : level(l), queueSize(50) {};
-
-Log::Log(log_level l, uint8_t s) : level(l), queueSize(s) {};
-#else
 Log::Log(): level(LOG_LEVEL_INFO) {};
 Log::Log(log_level l) : level(l) {};
-#endif
 
 Log::~Log() {
     if (websocket != nullptr) {
@@ -30,12 +23,6 @@ void Log::setLevel(log_level l) {
     level = l;
     info("Log level: %d\n", level);
 };
-
-#ifdef LOG_QUEUE
-void Log::setQueueSize(uint8_t s) {
-    queueSize = s;
-};
-#endif
 
 std::string Log::stringLevel() {
     switch (level) {
@@ -66,29 +53,13 @@ void Log::initServer(AsyncWebServer *server) {
 };
 
 void Log::broadcast(std::string message) {
-#ifdef LOG_QUEUE
-    queue.insert(queue.begin(), message);
-    while (queue.size() >= queueSize) {
-        queue.pop_back();
-    }
-#endif
-
     if (handler == nullptr || websocket == nullptr) {
         return;
     }
 
     websocket->cleanupClients();
     if (websocket->count() > 0) {
-#ifdef LOG_QUEUE
-        while (queue.size() > 0) {
-            websocket->textAll(queue.back().c_str());
-            queue.pop_back();
-        }
-#else
         websocket->textAll(message.c_str());
-#endif
-
-        return;
     }
 };
 
