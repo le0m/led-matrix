@@ -273,6 +273,24 @@
 					<div class="nes-field">
 						<textarea id="log-messages" class="nes-textarea"></textarea>
 					</div>
+
+					<div class="nes-field">
+						<label>
+							<input type="checkbox" class="nes-checkbox" id="monitor-enable">
+							<span>Enable system monitoring</span>
+						</label>
+						<div class="row-field">
+							<button id="submit-monitor" class="nes-btn is-disabled" disabled>Save</button>
+						</div>
+						<span id="submit-monitor-message" class="nes-text is-error">Error saving config</span>
+					</div>
+
+					<div class="nes-field">
+						<div class="row-field">
+							<button id="refresh-monitor" class="nes-btn">Refresh monitor</button>
+						</div>
+						<textarea id="monitor-messages" class="nes-textarea" readonly></textarea>
+					</div>
 				</div>
 
 				<div class="resources">

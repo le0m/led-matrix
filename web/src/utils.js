@@ -61,6 +61,20 @@ export const humanFileSize = (size) => {
 };
 
 /**
+ * Convert milliseconds to human-readable time intervals.
+ *
+ * @param {number} ms Duration in milliseconds
+ * @returns {string}
+ */
+export const humanTimeInterval = (ms) => {
+	const pad = (n) => `${n}`.padStart(2, '0');
+	const q = [(ms / 3.6e6) | 0, ((ms % 3.6e6) / 6e4) | 0, ((ms % 6e4) / 1000) | 0];
+	while (q.length && q[0] === 0) q.shift();
+
+	return `${q.length === 1 ? q[0] : q.map(pad).join(':')}${q.length ? `.${pad(ms % 1000).slice(0, 2)}${q.length === 1 ? ' s' : ''}` : `${pad(ms % 1000 | 0)} ms`}`;
+};
+
+/**
  * Wait some time.
  *
  * @param {number} ms Milliseconds

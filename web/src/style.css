@@ -32,6 +32,10 @@ section.nes-container.with-title > div > button {
 	overflow: scroll;
 }
 
+#refresh-monitor {
+	margin-bottom: 1rem;
+}
+
 .is-hidden {
 	display: none;
 }

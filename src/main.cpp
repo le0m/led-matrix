@@ -1,4 +1,5 @@
 #include "main.h"
+#include "modules/monitor.h"
 
 HUB75_I2S_CFG::i2s_pins pins = {R1_PIN, G1_PIN, B1_PIN, R2_PIN, G2_PIN, B2_PIN, A_PIN, B_PIN, C_PIN, D_PIN, E_PIN, LAT_PIN, OE_PIN, CLK_PIN};
 HUB75_I2S_CFG ledConfig(
@@ -28,6 +29,7 @@ AsyncWebServer server(80);
 ModeSelector selector;
 Config conf(updateConfig);
 Renderer *currentMode = nullptr;
+Monitor* monitor = nullptr;
 
 void updateQrText() {
     const char* url = wifi.getUrl();
@@ -108,6 +110,10 @@ void updateConfig(JsonDocument& newConfig) {
     }
 
     mapp.setConfig(newConfig["map"].as<JsonVariantConst>());
+
+    if (monitor != nullptr) {
+        monitor->setEnabled(newConfig["monitor"]["enable"].as<bool>());
+    }
 };
 
 void setup() {
@@ -125,9 +131,6 @@ void setup() {
 
     // Configure logs
     Log::instance()->setLevel(conf.current["log"]["level"].as<log_level>());
-#ifdef LOG_QUEUE
-    Log::instance()->setQueueSize(50);
-#endif
 
     // Initialize LED matrix
     display = setupLED(ledConfig);
@@ -159,6 +162,9 @@ void setup() {
     ota.initServer(&server);
 
     // Initialize modules
+    monitor = new Monitor(&wifi);
+    monitor->initServer(&server);
+    monitor->setEnabled(conf.current["monitor"]["enable"].as<bool>());
     media.initServer(&server);
     mapp.initServer(&server);
     mapp.setConfig(conf.current["map"].as<JsonVariantConst>());
