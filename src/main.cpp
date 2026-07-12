@@ -1,5 +1,4 @@
 #include "main.h"
-#include "modules/monitor.h"
 
 HUB75_I2S_CFG::i2s_pins pins = {R1_PIN, G1_PIN, B1_PIN, R2_PIN, G2_PIN, B2_PIN, A_PIN, B_PIN, C_PIN, D_PIN, E_PIN, LAT_PIN, OE_PIN, CLK_PIN};
 HUB75_I2S_CFG ledConfig(
@@ -11,7 +10,7 @@ HUB75_I2S_CFG ledConfig(
     false,                   // DMA double buffer (double RAM)
     I2C_CLK,                 // i2s clock speed
     LAT_BLANKING,            // how many clock cycles to blank before/after LAT change
-    true,                    // i2s clock phase (positive/negative edge)
+    CLK_PHASE,               // i2s clock phase (positive/negative edge)
     60,                      // minimum refresh rate
     PIXEL_COLOR_DEPTH_BITS   // color depth
 );
@@ -30,6 +29,7 @@ ModeSelector selector;
 Config conf(updateConfig);
 Renderer *currentMode = nullptr;
 Monitor* monitor = nullptr;
+ulong lastModePoll = 0;
 
 void updateQrText() {
     const char* url = wifi.getUrl();
@@ -141,10 +141,14 @@ void setup() {
     }
     display->setBrightness(conf.current["panel"]["brightness"].as<uint8_t>());
 
-    // Initialize gyroscope
+    // Initialize orientation sensor
     if (!selector.init()) {
-        return;
+        Log::instance()->error("Mode selector unavailable, staying in default mode\n");
     }
+
+    // Start media as default mode
+    currentMode = &media;
+    currentMode->open();
 
     // Initialize WiFi
     String ssid = conf.current["wifi"]["ssid"].as<String>();
@@ -183,6 +187,11 @@ void setup() {
         status["heap"]["minFree"] = ESP.getMinFreeHeap();
         status["heap"]["maxFreeBlock"] = ESP.getMaxAllocHeap();
         status["flash"] = ESP.getFlashChipSize();
+        status["psram"]["found"] = psramFound();
+        status["psram"]["size"] = ESP.getPsramSize();
+        status["psram"]["free"] = ESP.getFreePsram();
+        status["psram"]["minFree"] = ESP.getMinFreePsram();
+        status["psram"]["maxFreeBlock"] = ESP.getMaxAllocPsram();
         status["firmware"]["size"] = ESP.getFreeSketchSpace(); // see: https://github.com/espressif/arduino-esp32/issues/3131
         status["firmware"]["used"] = ESP.getSketchSize();
         status["firmware"]["version"] = VERSION; // defined at build time, see pre_version.py
@@ -204,8 +213,6 @@ void setup() {
     // Filesystem::tree("/", 0);
     setupOk = true;
 };
-
-ulong lastModePoll = 0;
 
 void loop() {
     if (!setupOk) {
