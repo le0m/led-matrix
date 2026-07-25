@@ -11,8 +11,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    permissions:
-      contents: write
+    strategy:
+      matrix:
+        env: [esp32, matrixportal]
 
     steps:
       - name: Checkout
@@ -23,7 +24,7 @@ jobs:
       - name: Cache
         uses: actions/cache@v4
         with:
-          key: cache-${{ github.ref_name }}
+          key: cache-${{ matrix.env }}-${{ github.ref_name }}
           path: |
             ~/.cache/pip
             ~/.platformio/.cache
@@ -50,20 +51,45 @@ jobs:
           cache-dependency-path: 'web/pnpm-lock.yaml'
 
       - name: Install C++ dependencies
-        run: pio pkg install
+        run: pio pkg install --environment ${{ matrix.env }}
 
       - name: Build firmware
-        run: pio run --environment stable
+        run: pio run --environment ${{ matrix.env }}
 
       - name: Build filesystem
-        run: pio run --target buildfs --environment stable
+        run: pio run --target buildfs --environment ${{ matrix.env }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.env }}
+          path: .pio/build/${{ matrix.env }}/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Rename artifacts for release
+        run: |
+          mv build-esp32/firmware.bin build-esp32/esp32-firmware.bin
+          mv build-esp32/littlefs.bin build-esp32/esp32-littlefs.bin
+          mv build-matrixportal/firmware.bin build-matrixportal/matrixportal-firmware.bin
+          mv build-matrixportal/littlefs.bin build-matrixportal/matrixportal-littlefs.bin
 
       - name: Release
-        if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
         uses: softprops/action-gh-release@v2
         with:
           make_latest: true
           generate_release_notes: true
           files: |
-            .pio/build/stable/firmware.bin
-            .pio/build/stable/littlefs.bin
+            build-esp32/esp32-firmware.bin
+            build-esp32/esp32-littlefs.bin
+            build-matrixportal/matrixportal-firmware.bin
+            build-matrixportal/matrixportal-littlefs.bin
