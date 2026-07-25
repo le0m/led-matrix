@@ -4,6 +4,7 @@ import { humanFileSize, setProgress } from './utils';
  * @typedef SystemStatus
  * @property {{size: number, free: number, minFree: number, maxFreeBlock: number}} heap
  * @property {number} flash
+ * @property {{found: boolean, size: number, free: number, minFree: number, maxFreeBlock: number}} psram
  * @property {{size: number, used: number, version: string}} firmware
  * @property {{size: number, used: number}} filesystem
  * @property {{model: string, revision: string, cores: number, clock: number}} chip
@@ -15,9 +16,12 @@ const swMsg = document.getElementById('software-message');
 const heap = document.getElementById('heap-perc');
 const fs = document.getElementById('fs-perc');
 const fw = document.getElementById('firmware-perc');
+const psramLabel = document.getElementById('psram-label');
+const psram = document.getElementById('psram-perc');
 const heapInfo = document.getElementById('heap-info');
 const fsInfo = document.getElementById('fs-info');
 const fwInfo = document.getElementById('fw-info');
+const psramInfo = document.getElementById('psram-info');
 const refreshButton = document.getElementById('refresh-resources');
 
 /**
@@ -45,6 +49,15 @@ const updateStatus = async (state) => {
 	heapInfo.innerText = `(${humanFileSize(status.heap.size - status.heap.free)} / ${humanFileSize(status.heap.size)})`;
 	fsInfo.innerText = `(${humanFileSize(status.filesystem.used)} / ${humanFileSize(status.filesystem.size)})`;
 	fwInfo.innerText = `(${humanFileSize(status.firmware.used)} / ${humanFileSize(status.firmware.size)})`;
+
+	if (status.psram.found) {
+		const psramPerc = (100 * (status.psram.size - status.psram.free)) / status.psram.size;
+		setProgress(psram, psramPerc);
+		psramInfo.innerText = `(${humanFileSize(status.psram.size - status.psram.free)} / ${humanFileSize(status.psram.size)})`;
+		psramLabel.classList.remove('is-hidden');
+	} else {
+		psramLabel.classList.add('is-hidden');
+	}
 };
 
 /**

@@ -19,12 +19,14 @@ class OTA {
     private:
         ulong reboot = 0;
         uint32_t rebootDelay = 1000;
+        bool updating = false;
 
     public:
         OTA(uint32_t);
         ~OTA();
         void initServer(AsyncWebServer*);
         void loop();
+        bool isUpdating();
 };
 
 #endif

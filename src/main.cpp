@@ -1,5 +1,4 @@
 #include "main.h"
-#include "modules/monitor.h"
 
 HUB75_I2S_CFG::i2s_pins pins = {R1_PIN, G1_PIN, B1_PIN, R2_PIN, G2_PIN, B2_PIN, A_PIN, B_PIN, C_PIN, D_PIN, E_PIN, LAT_PIN, OE_PIN, CLK_PIN};
 HUB75_I2S_CFG ledConfig(
@@ -11,7 +10,7 @@ HUB75_I2S_CFG ledConfig(
     false,                   // DMA double buffer (double RAM)
     I2C_CLK,                 // i2s clock speed
     LAT_BLANKING,            // how many clock cycles to blank before/after LAT change
-    true,                    // i2s clock phase (positive/negative edge)
+    CLK_PHASE,               // i2s clock phase (positive/negative edge)
     60,                      // minimum refresh rate
     PIXEL_COLOR_DEPTH_BITS   // color depth
 );
@@ -30,6 +29,11 @@ ModeSelector selector;
 Config conf(updateConfig);
 Renderer *currentMode = nullptr;
 Monitor* monitor = nullptr;
+StatusLed statusLed;
+wl_status_t prevWifiStatus = WL_IDLE_STATUS;
+wifi_mode_t prevWifiMode = WIFI_MODE_NULL;
+bool otaWasUpdating = false;
+ulong lastModePoll = 0;
 
 void updateQrText() {
     const char* url = wifi.getUrl();
@@ -87,6 +91,7 @@ bool changeMode(draw_mode newMode) {
         updateQrText();
     }
 
+    statusLed.onModeChanged(newMode);
     return true;
 };
 
@@ -114,14 +119,19 @@ void updateConfig(JsonDocument& newConfig) {
     if (monitor != nullptr) {
         monitor->setEnabled(newConfig["monitor"]["enable"].as<bool>());
     }
+
+    statusLed.setEnabled(newConfig["statusled"]["enable"].as<bool>());
 };
 
 void setup() {
     Log::instance()->begin(115200);
+    statusLed.init();
+    statusLed.onBoot();
 
     // Initialize LittleFS
     if (!LittleFS.begin()) {
         Log::instance()->error("LittleFS error\n");
+        statusLed.onFatalError();
 
         return;
     }
@@ -131,27 +141,44 @@ void setup() {
 
     // Configure logs
     Log::instance()->setLevel(conf.current["log"]["level"].as<log_level>());
+    statusLed.setEnabled((conf.current["statusled"]["enable"] | 1) != 0);
 
     // Initialize LED matrix
     display = setupLED(ledConfig);
     if (display == nullptr) {
         Log::instance()->error("Error setting up LED matrix\n");
+        statusLed.onFatalError();
 
         return;
     }
     display->setBrightness(conf.current["panel"]["brightness"].as<uint8_t>());
 
-    // Initialize gyroscope
+    // Initialize orientation sensor
     if (!selector.init()) {
-        return;
+        Log::instance()->error("Mode selector unavailable, staying in default mode\n");
     }
+
+    // Start media as default mode
+    currentMode = &media;
+    currentMode->open();
+    drawMode = DRAW_MODE_IMAGE;
 
     // Initialize WiFi
     String ssid = conf.current["wifi"]["ssid"].as<String>();
     String password = conf.current["wifi"]["password"].as<String>();
     if (!wifi.connect(ssid.c_str(), password.c_str())) {
+        statusLed.onFatalError();
+
         return;
     }
+
+    if (wifi.getMode() & WIFI_MODE_AP) {
+        statusLed.onApStarted();
+    } else {
+        statusLed.onWifiConnected();
+        prevWifiStatus = WL_CONNECTED;
+    }
+    prevWifiMode = wifi.getMode();
 
     updateQrText();
 
@@ -183,6 +210,11 @@ void setup() {
         status["heap"]["minFree"] = ESP.getMinFreeHeap();
         status["heap"]["maxFreeBlock"] = ESP.getMaxAllocHeap();
         status["flash"] = ESP.getFlashChipSize();
+        status["psram"]["found"] = psramFound();
+        status["psram"]["size"] = ESP.getPsramSize();
+        status["psram"]["free"] = ESP.getFreePsram();
+        status["psram"]["minFree"] = ESP.getMinFreePsram();
+        status["psram"]["maxFreeBlock"] = ESP.getMaxAllocPsram();
         status["firmware"]["size"] = ESP.getFreeSketchSpace(); // see: https://github.com/espressif/arduino-esp32/issues/3131
         status["firmware"]["used"] = ESP.getSketchSize();
         status["firmware"]["version"] = VERSION; // defined at build time, see pre_version.py
@@ -205,17 +237,45 @@ void setup() {
     setupOk = true;
 };
 
-ulong lastModePoll = 0;
-
 void loop() {
     if (!setupOk) {
         return;
     }
 
     ota.loop();
+    statusLed.tick();
+
+    bool nowUpdating = ota.isUpdating();
+    if (nowUpdating && !otaWasUpdating) {
+        statusLed.onOtaStart();
+    } else if (!nowUpdating && otaWasUpdating) {
+        statusLed.onOtaEnd();
+    }
+    otaWasUpdating = nowUpdating;
 
     if (millis() - lastModePoll >= 1000) {
         lastModePoll = millis();
+
+        wifi_mode_t wifiMode = wifi.getMode();
+        if (wifiMode != prevWifiMode) {
+            if (wifiMode & WIFI_MODE_AP) {
+                statusLed.onApStarted();
+            }
+            if (!(wifiMode & WIFI_MODE_STA)) {
+                prevWifiStatus = WL_IDLE_STATUS;
+            }
+            prevWifiMode = wifiMode;
+        }
+        if (wifiMode & WIFI_MODE_STA) {
+            wl_status_t wifiStatus = WiFi.status();
+            if (wifiStatus != WL_CONNECTED && prevWifiStatus == WL_CONNECTED) {
+                statusLed.onWifiReconnecting();
+            } else if (wifiStatus == WL_CONNECTED && prevWifiStatus != WL_CONNECTED) {
+                statusLed.onWifiConnected();
+            }
+            prevWifiStatus = wifiStatus;
+        }
+
         if (changeMode(selector.getMode())) {
             return;
         }

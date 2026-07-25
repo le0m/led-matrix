@@ -56,6 +56,7 @@ void OTA::initServer(AsyncWebServer* server) {
             return;
         }
 
+        updating = true;
         request->send(204);
     });
     server->on("/ota", HTTP_POST,
@@ -63,6 +64,7 @@ void OTA::initServer(AsyncWebServer* server) {
             Log::instance()->info("Update received\n");
             if (Update.hasError()) {
                 Log::instance()->error("Error completing update: %s\n", Update.errorString());
+                updating = false;
                 request->send(500, "text/plain", "error completing update");
 
                 return;
@@ -77,6 +79,7 @@ void OTA::initServer(AsyncWebServer* server) {
             if (len > 0) {
                 if (Update.write(data, len) != len) {
                     Log::instance()->error("Error writing update chunk: %s\n", Update.errorString());
+                    updating = false;
                     request->send(500, "text/plain", "error writing chunk");
 
                     return;
@@ -84,6 +87,7 @@ void OTA::initServer(AsyncWebServer* server) {
             }
             if (index + len == total && !Update.end()) {
                 Log::instance()->error("Error ending update: %s\n", Update.errorString());
+                updating = false;
                 request->send(500, "text/plain", "error ending update");
             }
         }
@@ -96,4 +100,8 @@ void OTA::loop() {
         reboot = 0;
         ESP.restart();
     }
+};
+
+bool OTA::isUpdating() {
+    return updating;
 };

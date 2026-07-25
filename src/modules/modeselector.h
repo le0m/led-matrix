@@ -1,14 +1,13 @@
 #ifndef _MODESELECTOR_H
 #define _MODESELECTOR_H
 
-#include "log.h"
+#include <math.h>
 #include <stdint.h>
-#include "Wire.h"
-#include "I2Cdev.h"
-#include "MPU6050_6Axis_MotionApps612.h"
+#include "log.h"
 
-#define SDA_PIN 21 // GPIO21
-#define SCL_PIN 19 // GPIO19
+#ifndef M_3PI_4
+#define M_3PI_4 (3.0 * M_PI_4)
+#endif
 
 // Running mode
 typedef enum {
@@ -21,17 +20,19 @@ typedef enum {
 
 class ModeSelector {
     private:
-        MPU6050 mpu;
-        // MPU control/status vars
-        bool dmpReady = false;  // set true if DMP init was successful
-        uint8_t deviceStatus;   // return status after each device operation (0 = success, !0 = error)
-        uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
-        uint8_t fifoBuffer[64]; // FIFO storage buffer
-        // orientation/motion vars
-        Quaternion q;           // [w, x, y, z]         quaternion container
-        VectorFloat gravity;    // [x, y, z]            gravity vector
-        float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll in radians
         draw_mode previousRead = DRAW_MODE_NONE;
+
+        draw_mode modeFromAngle(float angle) {
+            if (-M_PI_4 <= angle && angle <= M_PI_4) { // up
+                return DRAW_MODE_IMAGE;
+            } else if (M_PI_4 < angle && angle <= M_3PI_4) { // right
+                return DRAW_MODE_LIFE;
+            } else if (-M_3PI_4 <= angle && angle < -M_PI_4) { // left
+                return DRAW_MODE_MAP;
+            }
+
+            return DRAW_MODE_QR; // down
+        };
 
     public:
         ModeSelector();

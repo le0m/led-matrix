@@ -30,6 +30,7 @@ import { handleFetch } from './utils.js';
  * @property {{ ssid: string, password: string }} wifi
  * @property {{ brightness: number }} panel
  * @property {{ level: number }} log
+ * @property {{ enable: number }} statusled
  * @property {MapConfiguration} map
  */
 
