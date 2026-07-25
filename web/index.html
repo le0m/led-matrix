@@ -291,6 +291,17 @@
 						</div>
 						<textarea id="monitor-messages" class="nes-textarea" readonly></textarea>
 					</div>
+
+					<div class="nes-field">
+						<label>
+							<input type="checkbox" class="nes-checkbox" id="statusled-enable">
+							<span>Enable status LED</span>
+						</label>
+						<div class="row-field">
+							<button id="submit-statusled" class="nes-btn is-disabled" disabled>Save</button>
+						</div>
+						<span id="submit-statusled-message" class="nes-text is-error">Error saving config</span>
+					</div>
 				</div>
 
 				<div class="resources">
@@ -307,6 +318,10 @@
 							<label>
 								Firmware <span id="fw-info"></span>
 								<progress id="firmware-perc" class="nes-progress is-pattern" max="100"></progress>
+							</label>
+							<label id="psram-label" class="is-hidden">
+								PSRAM <span id="psram-info"></span>
+								<progress id="psram-perc" class="nes-progress is-pattern" max="100"></progress>
 							</label>
 						</div>
 

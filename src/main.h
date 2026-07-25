@@ -7,6 +7,7 @@
 #include "modules/wifi.h"
 #include "modules/led.h"
 #include "modules/monitor.h"
+#include "modules/statusled.h"
 #include "modules/modeselector.h"
 #include "modes/media.h"
 #include "modes/map.h"

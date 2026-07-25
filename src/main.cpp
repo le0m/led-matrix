@@ -29,6 +29,10 @@ ModeSelector selector;
 Config conf(updateConfig);
 Renderer *currentMode = nullptr;
 Monitor* monitor = nullptr;
+StatusLed statusLed;
+wl_status_t prevWifiStatus = WL_IDLE_STATUS;
+wifi_mode_t prevWifiMode = WIFI_MODE_NULL;
+bool otaWasUpdating = false;
 ulong lastModePoll = 0;
 
 void updateQrText() {
@@ -87,6 +91,7 @@ bool changeMode(draw_mode newMode) {
         updateQrText();
     }
 
+    statusLed.onModeChanged(newMode);
     return true;
 };
 
@@ -114,14 +119,19 @@ void updateConfig(JsonDocument& newConfig) {
     if (monitor != nullptr) {
         monitor->setEnabled(newConfig["monitor"]["enable"].as<bool>());
     }
+
+    statusLed.setEnabled(newConfig["statusled"]["enable"].as<bool>());
 };
 
 void setup() {
     Log::instance()->begin(115200);
+    statusLed.init();
+    statusLed.onBoot();
 
     // Initialize LittleFS
     if (!LittleFS.begin()) {
         Log::instance()->error("LittleFS error\n");
+        statusLed.onFatalError();
 
         return;
     }
@@ -131,11 +141,13 @@ void setup() {
 
     // Configure logs
     Log::instance()->setLevel(conf.current["log"]["level"].as<log_level>());
+    statusLed.setEnabled((conf.current["statusled"]["enable"] | 1) != 0);
 
     // Initialize LED matrix
     display = setupLED(ledConfig);
     if (display == nullptr) {
         Log::instance()->error("Error setting up LED matrix\n");
+        statusLed.onFatalError();
 
         return;
     }
@@ -149,13 +161,24 @@ void setup() {
     // Start media as default mode
     currentMode = &media;
     currentMode->open();
+    drawMode = DRAW_MODE_IMAGE;
 
     // Initialize WiFi
     String ssid = conf.current["wifi"]["ssid"].as<String>();
     String password = conf.current["wifi"]["password"].as<String>();
     if (!wifi.connect(ssid.c_str(), password.c_str())) {
+        statusLed.onFatalError();
+
         return;
     }
+
+    if (wifi.getMode() & WIFI_MODE_AP) {
+        statusLed.onApStarted();
+    } else {
+        statusLed.onWifiConnected();
+        prevWifiStatus = WL_CONNECTED;
+    }
+    prevWifiMode = wifi.getMode();
 
     updateQrText();
 
@@ -220,9 +243,39 @@ void loop() {
     }
 
     ota.loop();
+    statusLed.tick();
+
+    bool nowUpdating = ota.isUpdating();
+    if (nowUpdating && !otaWasUpdating) {
+        statusLed.onOtaStart();
+    } else if (!nowUpdating && otaWasUpdating) {
+        statusLed.onOtaEnd();
+    }
+    otaWasUpdating = nowUpdating;
 
     if (millis() - lastModePoll >= 1000) {
         lastModePoll = millis();
+
+        wifi_mode_t wifiMode = wifi.getMode();
+        if (wifiMode != prevWifiMode) {
+            if (wifiMode & WIFI_MODE_AP) {
+                statusLed.onApStarted();
+            }
+            if (!(wifiMode & WIFI_MODE_STA)) {
+                prevWifiStatus = WL_IDLE_STATUS;
+            }
+            prevWifiMode = wifiMode;
+        }
+        if (wifiMode & WIFI_MODE_STA) {
+            wl_status_t wifiStatus = WiFi.status();
+            if (wifiStatus != WL_CONNECTED && prevWifiStatus == WL_CONNECTED) {
+                statusLed.onWifiReconnecting();
+            } else if (wifiStatus == WL_CONNECTED && prevWifiStatus != WL_CONNECTED) {
+                statusLed.onWifiConnected();
+            }
+            prevWifiStatus = wifiStatus;
+        }
+
         if (changeMode(selector.getMode())) {
             return;
         }
