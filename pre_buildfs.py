@@ -32,6 +32,16 @@ def pre_gzip_static(source, target, env):
 		shutil.rmtree(www_dir_path)
 	gzip_dir_content(static_build_path, www_dir_path)
 
+def seed_config(source, target, env):
+	config_path = os.path.join(env.get('PROJECT_DIR'), 'data', 'config.json')
+	example_path = os.path.join(env.get('PROJECT_DIR'), 'config-default.json')
+	if os.path.exists(config_path):
+		return
+	if not os.path.exists(example_path):
+		raise ValueError('Missing data/config.json and config-default.json')
+	print('No data/config.json found, seeding it from config-default.json')
+	shutil.copyfile(example_path, config_path)
+
 # Delete littleFS image before adding this pre-action, otherwise it is not run if the image already exists.
 # Using 'buildfs' as target instead of the more specific file path causes this script to run AFTER the creation of the image.
 # I don't know if this is a bug or wanted behavior, and at this point I don't care.
@@ -39,4 +49,5 @@ fsbin = os.path.join(env['PROJECT_BUILD_DIR'], env['PIOENV'], 'littlefs.bin')
 if (os.path.exists(fsbin)):
 	os.remove(fsbin)
 
+env.AddPreAction(fsbin, seed_config)
 env.AddPreAction(fsbin, pre_gzip_static)
