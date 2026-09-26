@@ -40,6 +40,7 @@ def seed_config(source, target, env):
 	if not os.path.exists(example_path):
 		raise ValueError('Missing data/config.json and config-default.json')
 	print('No data/config.json found, seeding it from config-default.json')
+	os.makedirs(os.path.dirname(config_path), exist_ok=True)
 	shutil.copyfile(example_path, config_path)
 
 # Delete littleFS image before adding this pre-action, otherwise it is not run if the image already exists.
