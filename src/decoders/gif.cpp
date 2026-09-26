@@ -14,25 +14,6 @@ bool DecoderGIF::fileExists() {
     return Filesystem::pathExists(GIF_FILE_PATH);
 };
 
-bool DecoderGIF::deleteFile() {
-    return Filesystem::deleteFile(GIF_FILE_PATH);
-};
-
-bool DecoderGIF::writeFile(uint8_t *data, size_t len) {
-    return Filesystem::writeBytes(GIF_FILE_PATH, data, len);
-};
-
-bool DecoderGIF::sendFile(AsyncWebServerRequest *request) {
-    if (!fileExists()) {
-        return false;
-    }
-
-    Log::instance()->info("Sending current GIF\n");
-    request->send(LittleFS, GIF_FILE_PATH, GIF_FILE_TYPE);
-
-    return true;
-};
-
 bool DecoderGIF::open() {
     if (isOpen_) {
         return true;

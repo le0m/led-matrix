@@ -9,9 +9,6 @@
 #include "../decoders/gif.h"
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 
-#define IMAGE_PATH "/image.jpeg"
-#define GIF_PATH "/media.gif"
-
 class Media : public Renderer {
     private:
         typedef enum {
@@ -22,6 +19,7 @@ class Media : public Renderer {
         Decoder *current = nullptr;
         media_type mediaType = MEDIA_TYPE_NONE;
         bool checkSize(AsyncWebServerRequest*, size_t);
+        bool deleteFiles();
 
     public:
         Media(uint8_t, uint8_t);

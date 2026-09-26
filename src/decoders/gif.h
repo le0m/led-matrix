@@ -25,9 +25,6 @@ class DecoderGIF : public Decoder {
         DecoderGIF();
         virtual ~DecoderGIF();
         static bool fileExists();
-        virtual bool deleteFile();
-        virtual bool writeFile(uint8_t*, size_t);
-        virtual bool sendFile(AsyncWebServerRequest*);
         virtual bool open();
         virtual void close();
         virtual void renderFrame(MatrixPanel_I2S_DMA*);

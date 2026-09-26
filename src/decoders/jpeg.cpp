@@ -10,25 +10,6 @@ bool DecoderJPEG::fileExists() {
     return Filesystem::pathExists(JPEG_FILE_PATH);
 };
 
-bool DecoderJPEG::deleteFile() {
-    return Filesystem::deleteFile(JPEG_FILE_PATH);
-};
-
-bool DecoderJPEG::writeFile(uint8_t *data, size_t len) {
-    return Filesystem::writeBytes(JPEG_FILE_PATH, data, len);
-};
-
-bool DecoderJPEG::sendFile(AsyncWebServerRequest *request) {
-    if (!fileExists()) {
-        return false;
-    }
-
-    Log::instance()->info("Sending current JPEG\n");
-    request->send(LittleFS, JPEG_FILE_PATH, JPEG_FILE_TYPE);
-
-    return true;
-};
-
 bool DecoderJPEG::open() {
     if (isOpen_) {
         return true;

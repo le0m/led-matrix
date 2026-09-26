@@ -88,9 +88,23 @@ bool Media::checkSize(AsyncWebServerRequest *request, size_t size) {
     return true;
 };
 
+bool Media::deleteFiles() {
+    return Filesystem::deleteFile(JPEG_FILE_PATH) && Filesystem::deleteFile(GIF_FILE_PATH);
+};
+
 void Media::initServer(AsyncWebServer *server) {
-    server->on("/drawer", HTTP_GET, [&](AsyncWebServerRequest *request) {
-        if (current != nullptr && current->sendFile(request)) {
+    server->on("/drawer", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (DecoderJPEG::fileExists()) {
+            Log::instance()->info("Sending current JPEG\n");
+            request->send(LittleFS, JPEG_FILE_PATH, JPEG_FILE_TYPE);
+
+            return;
+        }
+
+        if (DecoderGIF::fileExists()) {
+            Log::instance()->info("Sending current GIF\n");
+            request->send(LittleFS, GIF_FILE_PATH, GIF_FILE_TYPE);
+
             return;
         }
 
@@ -98,30 +112,26 @@ void Media::initServer(AsyncWebServer *server) {
         request->send(204);
     });
     server->on("/drawer", HTTP_DELETE, [&](AsyncWebServerRequest *request) {
-        if (current == nullptr) {
-            Log::instance()->info("No media to delete\n");
-            request->send(204);
-
-            return;
-        }
-
         mediaType = MEDIA_TYPE_NONE;
-        current->close();
+        close();
         Log::instance()->info("Deleting current media\n");
 
-        if (!current->deleteFile()) {
+        if (!deleteFiles()) {
             Log::instance()->error("Error deleting file\n");
             request->send(500, "text/plain", "error deleting file");
 
             return;
         }
 
-        delete current;
-        current = nullptr;
         request->send(204);
     });
     server->on("/drawer", HTTP_POST,
         [&](AsyncWebServerRequest *request) {
+            // a response was already set by the body handler
+            if (request->getResponse() != nullptr) {
+                return;
+            }
+
             Log::instance()->info("Media received\n");
             const AsyncWebHeader *contentType = request->getHeader("Content-Type");
             if (contentType == nullptr) {
@@ -142,9 +152,9 @@ void Media::initServer(AsyncWebServer *server) {
         },
         nullptr,
         [&](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+            const AsyncWebHeader *contentType = request->getHeader("Content-Type");
             if (index == 0) {
                 Log::instance()->debug("Receiving file: %d bytes\n", total);
-                const AsyncWebHeader *contentType = request->getHeader("Content-Type");
                 if (contentType == nullptr) {
                     Log::instance()->error("Uploaded file has no content-type header");
                     request->send(400, "text/plain", "no content-type header");
@@ -163,32 +173,27 @@ void Media::initServer(AsyncWebServer *server) {
                 }
 
                 mediaType = MEDIA_TYPE_NONE;
+                close();
 
-                if (current != nullptr) {
-                    current->close();
+                if (!deleteFiles()) {
+                    Log::instance()->warning("Error deleting previous file\n");
+                    request->send(500, "text/plain", "error deleting previous file");
 
-                    if (!current->deleteFile()) {
-                        Log::instance()->warning("Error deleting previous file\n");
-                        request->send(500, "text/plain", "error deleting previous file");
-
-                        return;
-                    }
-
-                    Log::instance()->debug("Previous media deleted or not present\n");
-                    delete current;
-                    current = nullptr;
+                    return;
                 }
 
-                if (contentType->value() == "image/jpeg") {
-                    current = new DecoderJPEG();
-                } else if (contentType->value() == "image/gif") {
-                    current = new DecoderGIF();
-                } // else... checked before
+                Log::instance()->debug("Previous media deleted or not present\n");
+            }
+
+            // a response was already set from a previous chunk's error
+            if (request->getResponse() != nullptr) {
+                return;
             }
 
             Log::instance()->trace("Received file chunk: %d-%d (%d bytes)\n", index, index + len, len);
 
-            if (current == nullptr || !current->writeFile(data, len)) {
+            const char *path = contentType->value() == "image/jpeg" ? JPEG_FILE_PATH : GIF_FILE_PATH;
+            if (!Filesystem::writeBytes(path, data, len)) {
                 Log::instance()->error("Error writing file chunk\n");
                 request->send(500, "text/plain", "error writing file");
             }
@@ -197,7 +202,7 @@ void Media::initServer(AsyncWebServer *server) {
 };
 
 void Media::render(MatrixPanel_I2S_DMA *display) {
-    if (mediaType == MEDIA_TYPE_NONE || current == nullptr) {
+    if (mediaType == MEDIA_TYPE_NONE) {
         display->clearScreen();
 
         return;
