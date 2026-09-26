@@ -89,7 +89,7 @@ bool Media::checkSize(AsyncWebServerRequest *request, size_t size) {
 };
 
 bool Media::deleteFiles() {
-    return Filesystem::deleteFile(JPEG_FILE_PATH) && Filesystem::deleteFile(GIF_FILE_PATH);
+    return Filesystem::deleteFile(JPEG_FILE_PATH) && Filesystem::deleteFile(GIF_FILE_PATH) && Filesystem::deleteFile(UPLOAD_TMP_PATH);
 };
 
 void Media::initServer(AsyncWebServer *server) {
@@ -140,10 +140,19 @@ void Media::initServer(AsyncWebServer *server) {
 
                 return;
             }
-            if (contentType->value() == "image/jpeg") {
+
+            const bool isJPEG = contentType->value() == "image/jpeg";
+            if (!LittleFS.rename(UPLOAD_TMP_PATH, isJPEG ? JPEG_FILE_PATH : GIF_FILE_PATH)) {
+                Log::instance()->error("Error moving uploaded file in place\n");
+                request->send(500, "text/plain", "error storing file");
+
+                return;
+            }
+
+            if (isJPEG) {
                 Log::instance()->info("Image stored\n");
                 mediaType = MEDIA_TYPE_IMAGE;
-            } else if (contentType->value() == "image/gif") {
+            } else {
                 Log::instance()->info("GIF stored\n");
                 mediaType = MEDIA_TYPE_GIF;
             }
@@ -192,8 +201,7 @@ void Media::initServer(AsyncWebServer *server) {
 
             Log::instance()->trace("Received file chunk: %d-%d (%d bytes)\n", index, index + len, len);
 
-            const char *path = contentType->value() == "image/jpeg" ? JPEG_FILE_PATH : GIF_FILE_PATH;
-            if (!Filesystem::writeBytes(path, data, len)) {
+            if (!Filesystem::writeBytes(UPLOAD_TMP_PATH, data, len)) {
                 Log::instance()->error("Error writing file chunk\n");
                 request->send(500, "text/plain", "error writing file");
             }
