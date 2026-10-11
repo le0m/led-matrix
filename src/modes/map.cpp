@@ -55,22 +55,26 @@ void Map::setConfig(JsonVariantConst c) {
     Log::instance()->info("Updated map configuration\n");
 };
 
+bool Map::deleteFiles() {
+    return Filesystem::deleteFile(MAP_PATH) && Filesystem::deleteFile(UPLOAD_TMP_PATH);
+};
+
 void Map::initServer(AsyncWebServer *server) {
     server->on("/map", HTTP_GET, [&](AsyncWebServerRequest *request) {
-        if (!Filesystem::pathExists(MAP_PATH)) {
-            Log::instance()->info("No map currently stored\n");
-            request->send(204);
+        if (Filesystem::pathExists(MAP_PATH)) {
+            Log::instance()->info("Sending current map\n");
+            request->send(LittleFS, MAP_PATH, "image/jpeg");
 
             return;
         }
 
-        Log::instance()->info("Sending current map\n");
-        request->send(LittleFS, MAP_PATH, "image/jpeg");
+        Log::instance()->info("No map currently stored\n");
+        request->send(204);
     });
     server->on("/map", HTTP_DELETE, [&](AsyncWebServerRequest *request) {
         close();
         Log::instance()->info("Deleting map\n");
-        if (!Filesystem::deleteFile(MAP_PATH)) {
+        if (!deleteFiles()) {
             Log::instance()->error("Error deleting map\n");
             request->send(500, "text/plain", "error deleting map");
 
@@ -81,17 +85,16 @@ void Map::initServer(AsyncWebServer *server) {
     });
     server->on("/map", HTTP_POST,
         [&](AsyncWebServerRequest *request) {
-            Log::instance()->info("Map received\n");
-            const AsyncWebHeader *contentType = request->getHeader("Content-Type");
-            if (contentType == nullptr) {
-                Log::instance()->error("Uploaded map has no content-type header");
-                request->send(400, "text/plain", "no content-type header");
-
+            // a response was already set by the body handler
+            if (request->getResponse() != nullptr) {
                 return;
             }
-            if (contentType->value() != "image/jpeg") {
-                Log::instance()->error("Uploaded map has unhandled content-type: %s\n", contentType->value());
-                request->send(400, "text/plain", "unhandled content type");
+
+            Log::instance()->info("Map received\n");
+            if (!LittleFS.rename(UPLOAD_TMP_PATH, MAP_PATH)) {
+                Log::instance()->error("Error moving uploaded map in place\n");
+                isUpdating = false;
+                request->send(500, "text/plain", "error storing map");
 
                 return;
             }
@@ -102,21 +105,21 @@ void Map::initServer(AsyncWebServer *server) {
         },
         nullptr,
         [&](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-            const AsyncWebHeader *contentType = request->getHeader("Content-Type");
-            if (contentType == nullptr) {
-                Log::instance()->error("Uploaded map has no content-type header");
-                request->send(400, "text/plain", "no content-type header");
-
-                return;
-            }
-            if (contentType->value() != "image/jpeg") {
-                Log::instance()->error("Uploaded map has unhandled content-type: %s\n", contentType->value());
-                request->send(400, "text/plain", "unhandled content type");
-
-                return;
-            }
             if (index == 0) {
                 Log::instance()->debug("Receiving map: %d bytes\n", total);
+                const AsyncWebHeader *contentType = request->getHeader("Content-Type");
+                if (contentType == nullptr) {
+                    Log::instance()->error("Uploaded map has no content-type header");
+                    request->send(400, "text/plain", "no content-type header");
+
+                    return;
+                }
+                if (contentType->value() != "image/jpeg") {
+                    Log::instance()->error("Uploaded map has unhandled content-type: %s\n", contentType->value());
+                    request->send(400, "text/plain", "unhandled content type");
+
+                    return;
+                }
                 if (total > MAX_FILE_SIZE) {
                     Log::instance()->error("Map size %d exceeds maximum size %d\n", total, MAX_FILE_SIZE);
                     request->send(400, "text/plain", "map is too big");
@@ -132,8 +135,9 @@ void Map::initServer(AsyncWebServer *server) {
 
                 isUpdating = true;
                 close();
-                if (!Filesystem::deleteFile(MAP_PATH)) {
+                if (!deleteFiles()) {
                     Log::instance()->warning("Error deleting previous map\n");
+                    isUpdating = false;
                     request->send(500, "text/plain", "error deleting previous map");
 
                     return;
@@ -142,9 +146,15 @@ void Map::initServer(AsyncWebServer *server) {
                 Log::instance()->debug("Previous map deleted or not present\n");
             }
 
+            // a response was already set from a previous chunk's error
+            if (request->getResponse() != nullptr) {
+                return;
+            }
+
             Log::instance()->trace("Received map chunk: %d-%d (%d bytes)\n", index, index + len, len);
-            if (!Filesystem::writeBytes(MAP_PATH, data, len)) {
+            if (!Filesystem::writeBytes(UPLOAD_TMP_PATH, data, len)) {
                 Log::instance()->error("Error writing map chunk\n");
+                isUpdating = false;
                 request->send(500, "text/plain", "error writing map");
 
                 return;

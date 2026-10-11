@@ -6,6 +6,7 @@
 #include <ArduinoJson.h>
 
 #define MAX_FILE_SIZE 1048576 // 1 MiB
+#define UPLOAD_TMP_PATH "/upload.tmp"
 
 class Filesystem {
     public:

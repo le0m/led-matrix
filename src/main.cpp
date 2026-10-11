@@ -136,6 +136,8 @@ void setup() {
         return;
     }
 
+    Filesystem::deleteFile(UPLOAD_TMP_PATH);
+
     // Read configuration
     conf.load();
 
