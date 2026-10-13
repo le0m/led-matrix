@@ -174,16 +174,6 @@ void setup() {
         return;
     }
 
-    if (wifi.getMode() & WIFI_MODE_AP) {
-        statusLed.onApStarted();
-    } else {
-        statusLed.onWifiConnected();
-        prevWifiStatus = WL_CONNECTED;
-    }
-    prevWifiMode = wifi.getMode();
-
-    updateQrText();
-
     // Initialize log WebSocket
     Log::instance()->initServer(&server);
 
@@ -244,6 +234,7 @@ void loop() {
         return;
     }
 
+    wifi.loop();
     ota.loop();
     statusLed.tick();
 

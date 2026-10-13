@@ -1,77 +1,47 @@
 #include "wifi.h"
 
-WiFiController::WiFiController() {
+WiFiController::WiFiController() : eventsRegistered(false), failures(0), lastRetryCheckAt(0) {
+    ssid[0] = '\0';
+    password[0] = '\0';
     urlBuffer[0] = '\0';
     ipBuffer[0] = '\0';
 };
 
-WiFiController::~WiFiController() {};
-
 bool WiFiController::connect(const char* ssid, const char* password) {
-    if (!disconnect()) {
-        return false;
-    }
-    if (ssid[0] == '\0' || password[0] == '\0') {
-        Log::instance()->info("Starting WiFi in AP mode\n");
-
-        if (!WiFi.softAP(SETUP_AP_SSID, SETUP_AP_PASS)) {
-            Log::instance()->error("Error starting AP mode\n");
-
-            return false;
-        }
-
-        Log::instance()->info("Started network '%s' with IP %s\n", WiFi.softAPSSID().c_str(), WiFi.softAPIP().toString().c_str());
-
-        return true;
+    if (!eventsRegistered) {
+        registerEvents();
     }
 
-    Log::instance()->info("Starting WiFi in STA mode\n");
-    if (!WiFi.mode(WIFI_STA)) {
-        Log::instance()->error("Error setting STA mode\n");
+    strlcpy(this->ssid, ssid, sizeof(this->ssid));
+    strlcpy(this->password, password, sizeof(this->password));
 
-        return false;
+    if (this->ssid[0] == '\0' || this->password[0] == '\0') {
+        Log::instance()->info("No WiFi credentials configured\n");
+
+        return startAccessPoint();
     }
 
-    WiFi.setAutoReconnect(true);
-    WiFi.begin(ssid, password);
-    Log::instance()->info("Connecting to WiFi\n");
-    wl_status_t s;
-    uint8_t t = 0;
-    do {
-        t++;
-        s = WiFi.status();
-        delay(1000);
-    } while (s != WL_CONNECTED && t <= MAX_TRIES);
-    if (t > MAX_TRIES) {
-        Log::instance()->warning("Timeout reached trying to connect to WiFi (status: %d)\nFallback to AP mode\n", s);
-
-        return connect("", "");
-    }
-
-    Log::instance()->info("Connected to '%s' with IP %s (%d dBm)\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str(), WiFi.getTxPower());
-
-    return true;
+    return startStation();
 };
 
-bool WiFiController::disconnect() {
-    if (WiFi.getMode() & WIFI_MODE_STA) {
-        if (WiFi.status() == WL_CONNECTED) {
-            if (!WiFi.disconnect()) {
-                Log::instance()->error("Error disconnecting from STA mode\n");
-
-                return false;
-            }
-        }
-    }
-    if (WiFi.getMode() & WIFI_MODE_AP) {
-        if (!WiFi.softAPdisconnect()) {
-            Log::instance()->error("Error disconnecting from AP mode\n");
-
-            return false;
-        }
+void WiFiController::loop() {
+    if (ssid[0] == '\0' || password[0] == '\0' || WiFi.getMode() != WIFI_MODE_AP) {
+        return;
     }
 
-    return true;
+    if (millis() - lastRetryCheckAt < AP_RETRY_INTERVAL_MS) {
+        return;
+    }
+
+    // startStation() stops the AP, skip and reset the timer if someone is connected
+    if (WiFi.softAPgetStationNum() > 0) {
+        lastRetryCheckAt = millis();
+
+        return;
+    }
+
+    Log::instance()->info("Retrying WiFi network '%s'\n", ssid);
+    startStation();
 };
 
 const char* WiFiController::getIp() {
@@ -110,4 +80,70 @@ const char* WiFiController::getUrl() {
     snprintf(urlBuffer, MAX_URL_LENGTH, "http://%s/", ip);
 
     return urlBuffer;
+};
+
+void WiFiController::registerEvents() {
+    // Don't store credentials in NVS
+    WiFi.persistent(false);
+    // Autoreconnect gives up on some reasons (ex. AUTH_FAIL) and never stops on others, so we count retries ourselves
+    WiFi.setAutoReconnect(false);
+    WiFi.onEvent([this](arduino_event_id_t event, arduino_event_info_t info) {
+        onConnected();
+    }, ARDUINO_EVENT_WIFI_STA_GOT_IP);
+    WiFi.onEvent([this](arduino_event_id_t event, arduino_event_info_t info) {
+        onDisconnected(info.wifi_sta_disconnected.reason);
+    }, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+    eventsRegistered = true;
+};
+
+bool WiFiController::startStation() {
+    failures = 0;
+    Log::instance()->info("Connecting to WiFi network '%s'\n", ssid);
+
+    if (!WiFi.mode(WIFI_STA)) {
+        Log::instance()->error("Error setting STA mode\n");
+
+        return false;
+    }
+
+    WiFi.begin(ssid, password);
+
+    return true;
+};
+
+bool WiFiController::startAccessPoint() {
+    // softAP() does not disable STA, so we change mode first
+    if (!WiFi.mode(WIFI_AP) || !WiFi.softAP(SETUP_AP_SSID, SETUP_AP_PASS)) {
+        Log::instance()->error("Error starting AP mode\n");
+
+        return false;
+    }
+
+    lastRetryCheckAt = millis();
+    Log::instance()->info("Started network '%s' with IP %s\n", WiFi.softAPSSID().c_str(), WiFi.softAPIP().toString().c_str());
+
+    return true;
+};
+
+void WiFiController::onConnected() {
+    failures = 0;
+    Log::instance()->info("Connected to '%s' with IP %s (%d dBm)\n", ssid, WiFi.localIP().toString().c_str(), WiFi.RSSI());
+};
+
+void WiFiController::onDisconnected(uint8_t reason) {
+    if (reason == WIFI_REASON_ASSOC_LEAVE) {
+        return;
+    }
+
+    failures++;
+    Log::instance()->warning("WiFi disconnected (reason %u: %s), failure %u/%u\n", reason, WiFi.disconnectReasonName((wifi_err_reason_t) reason), failures, MAX_CONNECT_FAILURES);
+
+    if (failures < MAX_CONNECT_FAILURES) {
+        WiFi.reconnect();
+
+        return;
+    }
+
+    Log::instance()->warning("Unable to connect to '%s', falling back to AP mode\n", ssid);
+    startAccessPoint();
 };
